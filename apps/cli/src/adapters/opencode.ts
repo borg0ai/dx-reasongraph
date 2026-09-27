@@ -1,6 +1,9 @@
 import * as os from "node:os";
 import * as path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+// Type-only: erased at compile time, so it costs no runtime import. The
+// *value* is loaded lazily in openDb() — see the note there.
+import type { DatabaseSync } from "node:sqlite";
 import {
   Adapter,
   DiscoveredSession,
@@ -50,9 +53,25 @@ interface RawLine {
   data?: Record<string, unknown>;
 }
 
+/**
+ * Lazily-loaded `node:sqlite` constructor, cached after the first success.
+ *
+ * `node:sqlite` is still experimental, so merely importing it makes Node print
+ * `ExperimentalWarning: SQLite is an experimental feature` to stderr. A static
+ * top-level import fired that on EVERY reasongraph command — including ones
+ * that never touch an OpenCode db (`--version`, `context`, git-only paths) —
+ * which trained people to ignore all stderr.
+ *
+ * Requiring it on first use confines the warning to runs that actually read an
+ * OpenCode database, where it is accurate and worth seeing. `createRequire` is
+ * used because this module is ESM and the adapter API is synchronous.
+ */
+let sqliteCtor: typeof import("node:sqlite").DatabaseSync | undefined;
+
 function openDb(file: string): DatabaseSync | null {
   try {
-    return new DatabaseSync(file, { readOnly: true });
+    const Ctor = sqliteCtor ?? (sqliteCtor = createRequire(import.meta.url)("node:sqlite").DatabaseSync);
+    return new Ctor(file, { readOnly: true });
   } catch {
     return null;
   }

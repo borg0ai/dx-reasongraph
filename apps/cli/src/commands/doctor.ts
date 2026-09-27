@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { resolveRuntime, isInitialized } from "../util/runtime.js";
-import { isDisabled } from "../util/config.js";
+import { DistillerBackend, isDisabled } from "../util/config.js";
 import { readState } from "../state/state.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
 import { claudeProjectDirFor } from "../util/paths.js";
@@ -104,7 +104,7 @@ export function doctor(): number {
   }
 
   // Backend availability.
-  const backend = backendStatus();
+  const backend = backendStatus(rt.cfg.distiller.backend, rt.cfg.distiller.models[rt.cfg.distiller.backend]);
   line(backend.ok ? OK : MEH, backend.msg);
 
   say("");
@@ -123,9 +123,10 @@ function prePushInstalled(repoRoot: string): boolean {
   }
 }
 
-function backendStatus(): { ok: boolean; msg: string } {
-  if (process.env.ANTHROPIC_API_KEY) return { ok: true, msg: "distiller backend: ANTHROPIC_API_KEY present" };
-  const res = spawnSync("claude", ["--version"], { encoding: "utf8", timeout: 5000 });
-  if (res.status === 0) return { ok: true, msg: `distiller backend: claude CLI (${(res.stdout || "").trim().split("\n")[0]})` };
-  return { ok: false, msg: "distiller backend: no `claude` CLI and no ANTHROPIC_API_KEY — distillation will fail" };
+function backendStatus(backend: DistillerBackend, model: string | undefined): { ok: boolean; msg: string } {
+  if (!model?.trim()) return { ok: false, msg: `distiller backend: ${backend} has no distiller.models.${backend}` };
+  const res = spawnSync(backend, ["--version"], { encoding: "utf8", timeout: 5000 });
+  const version = (res.stdout || res.stderr || "").trim().split("\n")[0];
+  if (res.status === 0) return { ok: true, msg: `distiller backend: ${backend} model ${model} (${version})` };
+  return { ok: false, msg: `distiller backend: \`${backend}\` is not on PATH` };
 }

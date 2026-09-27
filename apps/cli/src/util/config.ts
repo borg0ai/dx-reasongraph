@@ -1,20 +1,25 @@
 import * as fs from "node:fs";
 import { reasongraphPaths } from "./paths.js";
 
-export type DistillerBackend = "claude" | "api";
+export type DistillerBackend = "claude" | "agent" | "codex";
+
+/** Model id for each distiller CLI. The active backend reads only its own entry. */
+export interface CliModels {
+  claude: string;
+  agent: string;
+  codex: string;
+}
 
 export interface reasongraphConfig {
-  /** Distiller backend + model. */
+  /** Distiller CLI and the model bound to each CLI. */
   distiller: {
     backend: DistillerBackend;
-    /** Model alias for the claude CLI, or model id for the API backend. */
-    model: string;
+    models: CliModels;
     /**
      * How many transcript chunks to distill concurrently. A big session is many
      * chunks, and one-at-a-time is what made the pre-push sweep blow its budget.
-     * Kept low by default: the `claude` backend spawns a subprocess per call, so
-     * 3 is a safe "usually finishes in budget" without thrashing. Heavy users on
-     * `backend: "api"` (plain HTTP, no subprocess) can raise it.
+     * Kept low by default: each backend spawns a CLI per call, so 3 stays inside
+     * the budget without thrashing.
      */
     concurrency: number;
   };
@@ -60,7 +65,11 @@ export interface reasongraphConfig {
 export const DEFAULT_CONFIG: reasongraphConfig = {
   distiller: {
     backend: "claude",
-    model: "haiku",
+    models: {
+      claude: "haiku",
+      agent: "auto",
+      codex: "gpt-6-luna",
+    },
     concurrency: 3,
   },
   redaction: [],
@@ -74,6 +83,25 @@ export const DEFAULT_CONFIG: reasongraphConfig = {
   sync: "auto",
   selfOnly: false,
 };
+
+/** Old configs stored one `model` string. That string belongs to the claude CLI. */
+function normalizeDistiller(raw: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!raw || typeof raw.distiller !== "object" || raw.distiller === null || Array.isArray(raw.distiller)) {
+    return raw;
+  }
+  const distiller = { ...(raw.distiller as Record<string, unknown>) };
+  const legacy = distiller.model;
+  delete distiller.model;
+  if (typeof legacy === "string" && legacy.trim()) {
+    const models =
+      typeof distiller.models === "object" && distiller.models !== null && !Array.isArray(distiller.models)
+        ? { ...(distiller.models as Record<string, unknown>) }
+        : {};
+    if (typeof models.claude !== "string" || !models.claude.trim()) models.claude = legacy.trim();
+    distiller.models = models;
+  }
+  return { ...raw, distiller };
+}
 
 function readJson(file: string): Record<string, unknown> | null {
   try {
@@ -110,8 +138,8 @@ function deepMerge<T>(base: T, override: Record<string, unknown> | null): T {
 export function loadConfig(repoRoot: string): reasongraphConfig {
   const paths = reasongraphPaths(repoRoot);
   let cfg = DEFAULT_CONFIG;
-  cfg = deepMerge(cfg, readJson(paths.sharedConfigFile));
-  cfg = deepMerge(cfg, readJson(paths.localConfigFile));
+  cfg = deepMerge(cfg, normalizeDistiller(readJson(paths.sharedConfigFile)));
+  cfg = deepMerge(cfg, normalizeDistiller(readJson(paths.localConfigFile)));
   // Self-only is a personal "never commit" mode: force sync to manual so no
   // settle-point or explicit commit path can fire, whatever the shared config says.
   if (cfg.selfOnly) cfg = { ...cfg, sync: "manual" };
@@ -121,7 +149,10 @@ export function loadConfig(repoRoot: string): reasongraphConfig {
 /** The team-shared config written by `init` (committed). */
 export function defaultSharedConfig(): Record<string, unknown> {
   return {
-    distiller: { backend: DEFAULT_CONFIG.distiller.backend, model: DEFAULT_CONFIG.distiller.model },
+    distiller: {
+      backend: DEFAULT_CONFIG.distiller.backend,
+      models: DEFAULT_CONFIG.distiller.models,
+    },
     redaction: [],
     timeBudgetMs: DEFAULT_CONFIG.timeBudgetMs,
     sync: DEFAULT_CONFIG.sync,

@@ -1,7 +1,11 @@
 {
   "distiller": {
-    "backend": "claude",
-    "model": "haiku"
+    "backend": "agent",
+    "models": {
+      "claude": "haiku",
+      "agent": "auto",
+      "codex": "gpt-6-luna"
+    }
   },
   "redaction": [],
   "timeBudgetMs": 60000

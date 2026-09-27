@@ -64,6 +64,11 @@ export async function distillEvents(
   const results: (DistilledPack | null)[] = new Array(chunks.length).fill(null);
   let chunkFailures = 0;
   let truncated = false;
+  // First underlying failure, kept so a total wipeout can report WHY. Without
+  // this, an auth/quota/rate-limit refusal (which fails every chunk identically)
+  // is indistinguishable from N independent chunk flakes — the operator sees
+  // "all 1 chunk(s) failed" and has no idea the distiller never reached a model.
+  let firstError: string | undefined;
   let cursor = 0; // next chunk to claim; `i = cursor++` is atomic on one thread
 
   const worker = async (): Promise<void> => {
@@ -83,10 +88,11 @@ export async function distillEvents(
       try {
         const raw = await backend.complete(DISTILLER_SYSTEM, user, timeout);
         results[i] = coercePack(extractJson(raw));
-      } catch {
+      } catch (e) {
         // One slow/failed chunk must not lose the whole session (bias to recall,
         // eventually consistent). Skip it and keep the decisions from the rest.
         chunkFailures++;
+        firstError ??= e instanceof Error ? e.message : String(e);
       }
     }
   };
@@ -96,7 +102,9 @@ export async function distillEvents(
 
   const partials = results.filter((p): p is DistilledPack => p !== null); // index order preserved
   if (partials.length === 0) {
-    const reason = truncated ? "deadline hit before any chunk distilled" : `all ${chunks.length} chunk(s) failed`;
+    const reason = truncated
+      ? "deadline hit before any chunk distilled"
+      : `all ${chunks.length} chunk(s) failed: ${firstError ?? "unknown error"}`;
     return { ok: false, pack: emptyPack(), reason, truncated: truncated || undefined };
   }
 
