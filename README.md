@@ -31,7 +31,7 @@ Risk: guest users diverge from the normal signup path.
 Reviewer attention: confirm whether guests should be modeled as normal users.
 ```
 
-Run `grep -rn "agent-initiated" .ai/why/` and you get a list of every decision the agent made without asking anyone.
+Run `grep -rn "agent-initiated" .reasongraph/why/` and you get a list of every decision the agent made without asking anyone.
 
 ## How it works
 
@@ -45,7 +45,7 @@ git push      # ReasonGraph writes the why file and shows it to you for review
 A few things worth knowing:
 
 - It works from the transcript after the fact. It never asks the agent to "log its decisions" mid-task (we tried that first, agents just don't do it).
-- Each branch gets one file: `.ai/why/<branch>.md`.
+- Each branch gets one file: `.reasongraph/why/<branch>.md`.
 - Future agents see this. A note in `AGENTS.md` points them at the why files, and a hook injects relevant entries before an agent edits a file with history.
 - It never blocks a push, never touches your staging area, and never pushes anything itself. It plays fine with multiple agents and worktrees.
 
@@ -53,7 +53,7 @@ A few things worth knowing:
 
 ```mermaid
 flowchart TD
-    why[("the why-pack<br/>(.ai/why/, committed)")]
+    why[("the why-pack<br/>(.reasongraph/why/, committed)")]
 
     agents["AGENTS.md pointer<br/>auto-loaded every session"]
     hook["PreToolUse hook<br/>fires right before an edit"]

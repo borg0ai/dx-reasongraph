@@ -56,7 +56,7 @@ export function status(): number {
     say("Why-packs: none yet.");
   } else {
     say(`Why-packs (${packs.length}):`);
-    for (const p of packs) say(`  .ai/why/${p}`);
+    for (const p of packs) say(`  .reasongraph/why/${p}`);
   }
 
   // Freshness for the current branch.
@@ -76,10 +76,10 @@ export function status(): number {
   // freshness axes don't apply — report the mode instead of nagging.
   if (rt.cfg.selfOnly) {
     say("");
-    const tracked = trackedFilesUnder(rt.repoRoot, ".ai");
+    const tracked = trackedFilesUnder(rt.repoRoot, ".reasongraph/why");
     if (tracked.length) {
       say(
-        `  ⚠ why-pack: self-only mode, but ${tracked.length} file(s) under .ai/ are already ` +
+        `  ⚠ why-pack: self-only mode, but ${tracked.length} file(s) under .reasongraph/why/ are already ` +
           "git-tracked — the exclude can't hide them. Run `git rm --cached -r .ai` to untrack.",
       );
     } else {

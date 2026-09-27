@@ -36,7 +36,7 @@ test("ensureAgentsMd creates the pointer and is idempotent", () => {
   assert.equal(ensureAgentsMd(repo), "created");
   const md = fs.readFileSync(path.join(repo, "AGENTS.md"), "utf8");
   assert.match(md, /reasongraph:begin/);
-  assert.match(md, /\.ai\/why/);
+  assert.match(md, /\.reasongraph\/why/);
   assert.match(md, /prefer it over commit messages/i);
   // Second call is a no-op — no duplicate block.
   assert.equal(ensureAgentsMd(repo), "already present");

@@ -52,7 +52,7 @@ export interface AutoCommitResult {
 }
 
 /**
- * Commit ONLY the current `.ai/why/` working-tree state on top of HEAD, using a
+ * Commit ONLY the current `.reasongraph/why/` working-tree state on top of HEAD, using a
  * throwaway index (GIT_INDEX_FILE) — never the repo's real staging area. The
  * user's staged work (and any concurrent agent's) is never read, `git add`ed, or
  * swept in: this is the exact inverse of the "swept-cart" bug, so it must never
@@ -80,10 +80,10 @@ export function autoCommitWhyPack(repoRoot: string): AutoCommitResult {
   const ref = sym.stdout;
   const branch = ref.slice("refs/heads/".length);
 
-  // Anything to commit under .ai/why? `-uall` lists individual untracked files
-  // rather than collapsing a wholly-untracked .ai/why/ (the first-ever pack) to
+  // Anything to commit under .reasongraph/why? `-uall` lists individual untracked files
+  // rather than collapsing a wholly-untracked directory (the first-ever pack) to
   // just the directory name, so `files` names the actual packs.
-  const st = run(repoRoot, ["status", "--porcelain", "-uall", "--", ".ai/why"]);
+  const st = run(repoRoot, ["status", "--porcelain", "-uall", "--", ".reasongraph/why"]);
   if (st.status !== 0) return { committed: false, reason: "git status failed" };
   if (!st.stdout) return { committed: false, reason: "nothing to commit" };
   const files = st.stdout
@@ -93,7 +93,7 @@ export function autoCommitWhyPack(repoRoot: string): AutoCommitResult {
 
   // If the human has STAGED why-pack changes, they're mid-review — don't yank it
   // out from under them. Leave everything and try again next settle point.
-  const staged = run(repoRoot, ["diff", "--cached", "--name-only", "--", ".ai/why"]);
+  const staged = run(repoRoot, ["diff", "--cached", "--name-only", "--", ".reasongraph/why"]);
   if (staged.status === 0 && staged.stdout) {
     return { committed: false, reason: "why-pack changes are staged (mid-review)" };
   }
@@ -110,7 +110,7 @@ export function autoCommitWhyPack(repoRoot: string): AutoCommitResult {
       return { committed: false, reason: "read-tree failed" };
     }
     // -A picks up modifications, new packs, and deletions (e.g. an orphaned pack).
-    if (run(repoRoot, ["add", "-A", "--", ".ai/why"], env).status !== 0) {
+    if (run(repoRoot, ["add", "-A", "--", ".reasongraph/why"], env).status !== 0) {
       return { committed: false, reason: "scratch add failed" };
     }
     const tree = run(repoRoot, ["write-tree"], env);
@@ -130,10 +130,10 @@ export function autoCommitWhyPack(repoRoot: string): AutoCommitResult {
     const upd = run(repoRoot, ["update-ref", ref, newSha, oldHead]);
     if (upd.status !== 0) return { committed: false, reason: "ref moved concurrently" };
 
-    // Sync the REAL index's .ai/why entries up to the new commit so `git status`
+    // Sync the REAL index's why entries up to the new commit so `git status`
     // reads clean — scoped to this pathspec, so other staged entries are untouched
     // and the working tree is never modified.
-    run(repoRoot, ["reset", "-q", "--", ".ai/why"]);
+    run(repoRoot, ["reset", "-q", "--", ".reasongraph/why"]);
 
     return { committed: true, sha: newSha, branch, files };
   } finally {
@@ -146,9 +146,9 @@ export function autoCommitWhyPack(repoRoot: string): AutoCommitResult {
 }
 
 export interface WhyPackGitStatus {
-  /** .ai/why files with uncommitted (working-tree, staged, or untracked) changes. */
+  /** Why-pack files with uncommitted (working-tree, staged, or untracked) changes. */
   uncommitted: number;
-  /** Commits on HEAD not yet on the upstream that touch .ai/why. */
+  /** Commits on HEAD not yet on the upstream that touch why-packs. */
   unpushed: number;
   /** Whether the current branch has an upstream to compare against. */
   hasUpstream: boolean;
@@ -161,7 +161,7 @@ export interface WhyPackGitStatus {
  * instead of a sniffing expedition.
  */
 export function whyPackGitStatus(repoRoot: string): WhyPackGitStatus {
-  const st = run(repoRoot, ["status", "--porcelain", "-uall", "--", ".ai/why"]);
+  const st = run(repoRoot, ["status", "--porcelain", "-uall", "--", ".reasongraph/why"]);
   const uncommitted = st.status === 0 && st.stdout ? st.stdout.split("\n").filter(Boolean).length : 0;
 
   let hasUpstream = false;
@@ -169,7 +169,7 @@ export function whyPackGitStatus(repoRoot: string): WhyPackGitStatus {
   const up = run(repoRoot, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
   if (up.status === 0 && up.stdout) {
     hasUpstream = true;
-    const cnt = run(repoRoot, ["rev-list", "--count", "@{upstream}..HEAD", "--", ".ai/why"]);
+    const cnt = run(repoRoot, ["rev-list", "--count", "@{upstream}..HEAD", "--", ".reasongraph/why"]);
     if (cnt.status === 0) unpushed = parseInt(cnt.stdout, 10) || 0;
   }
   return { uncommitted, unpushed, hasUpstream };

@@ -24,12 +24,12 @@ function tempRepo(): string {
 }
 
 function writeWhy(dir: string, body: string): void {
-  const whyDir = path.join(dir, ".ai", "why");
+  const whyDir = path.join(dir, ".reasongraph", "why");
   fs.mkdirSync(whyDir, { recursive: true });
   fs.writeFileSync(path.join(whyDir, "main.md"), body);
 }
 
-test("commits only .ai/why and leaves the user's staged work untouched", () => {
+test("commits only .reasongraph/why and leaves the user's staged work untouched", () => {
   const dir = tempRepo();
   writeWhy(dir, "# why-pack\n\n### A decision\n");
 
@@ -43,13 +43,13 @@ test("commits only .ai/why and leaves the user's staged work untouched", () => {
 
   assert.equal(res.committed, true);
   assert.equal(res.branch, "main");
-  assert.deepEqual(res.files, [".ai/why/main.md"], "reported path keeps its leading dot");
+  assert.deepEqual(res.files, [".reasongraph/why/main.md"], "reported path keeps its leading dot");
   const after = git(dir, ["rev-parse", "HEAD"]).stdout;
   assert.notEqual(after, before, "HEAD advanced by one commit");
 
   // The commit contains ONLY the why-pack.
   const files = git(dir, ["show", "--name-only", "--pretty=format:", "HEAD"]).stdout.split("\n").filter(Boolean);
-  assert.deepEqual(files, [".ai/why/main.md"]);
+  assert.deepEqual(files, [".reasongraph/why/main.md"]);
   assert.match(git(dir, ["log", "-1", "--pretty=%s"]).stdout, /^reasongraph: update why-pack \(main\)$/);
 
   // The user's staged app.ts is STILL staged and STILL uncommitted.
@@ -57,7 +57,7 @@ test("commits only .ai/why and leaves the user's staged work untouched", () => {
   // The untracked file is still untracked.
   assert.ok(git(dir, ["status", "--porcelain"]).stdout.includes("?? notes.txt"));
   // The why-pack now reads clean (index synced to the new commit).
-  assert.equal(git(dir, ["status", "--porcelain", "--", ".ai/why"]).stdout, "");
+  assert.equal(git(dir, ["status", "--porcelain", "--", ".reasongraph/why"]).stdout, "");
 });
 
 test("commits a brand-new (untracked) why-pack file", () => {
@@ -66,22 +66,22 @@ test("commits a brand-new (untracked) why-pack file", () => {
   const res = autoCommitWhyPack(dir);
   assert.equal(res.committed, true);
   const files = git(dir, ["show", "--name-only", "--pretty=format:", "HEAD"]).stdout.split("\n").filter(Boolean);
-  assert.deepEqual(files, [".ai/why/main.md"]);
+  assert.deepEqual(files, [".reasongraph/why/main.md"]);
 });
 
 test("captures a why-pack deletion (orphan removal)", () => {
   const dir = tempRepo();
   // Commit two packs first, via the tool.
   writeWhy(dir, "# main\n");
-  fs.writeFileSync(path.join(dir, ".ai", "why", "gone.md"), "# orphan\n");
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "gone.md"), "# orphan\n");
   autoCommitWhyPack(dir);
-  assert.ok(git(dir, ["ls-files", ".ai/why/gone.md"]).stdout.includes("gone.md"));
+  assert.ok(git(dir, ["ls-files", ".reasongraph/why/gone.md"]).stdout.includes("gone.md"));
 
   // Now delete the orphan and auto-commit again.
-  fs.rmSync(path.join(dir, ".ai", "why", "gone.md"));
+  fs.rmSync(path.join(dir, ".reasongraph", "why", "gone.md"));
   const res = autoCommitWhyPack(dir);
   assert.equal(res.committed, true);
-  assert.equal(git(dir, ["ls-files", ".ai/why/gone.md"]).stdout, "", "orphan removed from the tree");
+  assert.equal(git(dir, ["ls-files", ".reasongraph/why/gone.md"]).stdout, "", "orphan removed from the tree");
 });
 
 test("does nothing when there is no why-pack change", () => {
@@ -96,7 +96,7 @@ test("does nothing when there is no why-pack change", () => {
 test("refuses when the human has staged why-pack changes (mid-review)", () => {
   const dir = tempRepo();
   writeWhy(dir, "# pack\n");
-  git(dir, ["add", ".ai/why/main.md"]); // human staged it — they're reviewing
+  git(dir, ["add", ".reasongraph/why/main.md"]); // human staged it — they're reviewing
   const res = autoCommitWhyPack(dir);
   assert.equal(res.committed, false);
   assert.equal(res.reason, "why-pack changes are staged (mid-review)");

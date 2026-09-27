@@ -32,7 +32,7 @@ export function uninstall(): number {
   }
 
   say("reasongraph: removed Git hook and local state (.reasongraph/state).");
-  say("Committed why-packs (.ai/why) and ReasonGraph config were left untouched.");
+  say("Committed why-packs (.reasongraph/why) and ReasonGraph config were left untouched.");
   return 0;
 }
 

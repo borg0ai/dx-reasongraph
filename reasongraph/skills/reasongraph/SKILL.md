@@ -11,7 +11,7 @@ important rationale available to future contributors.
 ## Before changing code
 
 1. Run `npx --yes @borg0ai/reasongraph context <file-or-directory>` for the code being changed.
-2. Read matching entries under `.ai/why/` when the CLI reports prior decisions.
+2. Read matching entries under `.reasongraph/why/` when the CLI reports prior decisions.
 3. Treat those entries as project context; surface conflicts to the user before
    changing the recorded direction.
 
@@ -19,9 +19,9 @@ important rationale available to future contributors.
 
 When a non-obvious design choice is made, state the decision and rationale
 clearly, then run `npx --yes @borg0ai/reasongraph sync` to record it. Review
-`.ai/why/` before sharing it.
+`.reasongraph/why/` before sharing it.
 
 ## If CLI is unavailable
 
-Read `.ai/why/` directly. Do not invent project history or claim that a
+Read `.reasongraph/why/` directly. Do not invent project history or claim that a
 decision was recorded when it was not.

@@ -35,6 +35,8 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   const paths = reasongraphPaths(repoRoot);
   const selfOnly = opts.selfOnly === true;
 
+  if (!migrateLegacyWhyPacks(repoRoot, paths.whyDir, selfOnly)) return 1;
+
   ensureDir(path.dirname(paths.sharedConfigFile));
 
   // 1. Directories.
@@ -66,14 +68,14 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   say("");
   say("Installed:");
   if (selfOnly) {
-    say(`  • .ai/why/            personal why-packs (never committed)`);
-    say(`  • .git/info/exclude   ignores .ai/ (private)`);
+    say(`  • .reasongraph/why/   personal why-packs (never committed)`);
+    say(`  • .git/info/exclude   ignores ReasonGraph data (private)`);
     say(`  • AGENTS.md pointer   skipped in self-only mode`);
   } else {
-    say(`  • .ai/why/            shared why-packs (committed — this is what everyone reads)`);
+    say(`  • .reasongraph/why/   shared why-packs (committed — this is what everyone reads)`);
     say(`  • .reasongraph/config.json team config (committed)`);
     say(`  • .reasongraph/state/    local state (gitignored)`);
-    say(`  • AGENTS.md pointer   ${agentsMdResult} (tells agents to read .ai/why/)`);
+    say(`  • AGENTS.md pointer   ${agentsMdResult} (tells agents to read .reasongraph/why/)`);
   }
   say("  • Agent hooks         run `reasongraph install` to install the plugin");
   say(`  • git pre-push hook   ${prePushResult}`);
@@ -86,7 +88,7 @@ export async function init(opts: InitOptions = {}): Promise<number> {
     say("Privacy model:");
     say("  Your session transcript never leaves this machine. At session end (and as a");
     say("  catch-up at git push) ReasonGraph distills a privacy-filtered digest of the");
-    say("  decisions — never your messages, never your questions — into .ai/why/. That");
+    say("  decisions — never your messages, never your questions — into .reasongraph/why/. That");
     say("  markdown is the only shared artifact. Review before pushing; edits are kept.");
   }
   say("");
@@ -94,6 +96,30 @@ export async function init(opts: InitOptions = {}): Promise<number> {
 
   // 7. Offer to backfill from any prior local sessions for this repo.
   return offerBackfill(repoRoot);
+}
+
+/** Move old packs once; preflight every collision before changing either tree. */
+function migrateLegacyWhyPacks(repoRoot: string, whyDir: string, selfOnly: boolean): boolean {
+  const legacyDir = path.join(repoRoot, ".ai", "why");
+  if (!fs.existsSync(legacyDir)) return true;
+
+  const packs = fs.readdirSync(legacyDir).filter((name) => name.endsWith(".md"));
+  const conflicts = packs.filter((name) => fs.existsSync(path.join(whyDir, name)));
+  if (conflicts.length) {
+    warn(`cannot migrate .ai/why/: destination already has ${conflicts.join(", ")}`);
+    return false;
+  }
+
+  if (!packs.length) return true;
+  ensureDir(whyDir);
+  for (const name of packs) {
+    const source = path.join(legacyDir, name);
+    const destination = path.join(whyDir, name);
+    if (selfOnly) fs.copyFileSync(source, destination);
+    else fs.renameSync(source, destination);
+  }
+  if (!selfOnly && fs.readdirSync(legacyDir).length === 0) fs.rmdirSync(legacyDir);
+  return true;
 }
 
 /**
@@ -124,7 +150,7 @@ async function offerBackfill(repoRoot: string): Promise<number> {
   const yes = promptYesNo(
     `reasongraph: found ${n} prior Claude ${plural} for this repo.\n` +
       `  Distill them into a why-pack now? Runs the LLM locally, may take a few min.\n` +
-      `  (Nothing is committed — you review .ai/why/ before sharing.) [y/N] `,
+      `  (Nothing is committed — you review .reasongraph/why/ before sharing.) [y/N] `,
   );
   if (!yes) {
     say("  Skipped. Run `reasongraph distill` whenever you're ready to backfill.");
@@ -135,7 +161,7 @@ async function offerBackfill(repoRoot: string): Promise<number> {
   say(`reasongraph: distilling ${n} ${plural}… (Ctrl-C to stop; partial progress is kept)`);
   const code = await distill({ allDirty: true });
   say("");
-  say("reasongraph: backfill done. Review .ai/why/ before you commit — nothing was staged.");
+  say("reasongraph: backfill done. Review .reasongraph/why/ before you commit — nothing was staged.");
   return code;
 }
 
@@ -153,7 +179,7 @@ function setupShared(repoRoot: string, paths: reasongraphPaths): void {
 
 /**
  * Personal setup: persist the mode locally, ignore artifacts via the repo's
- * private `.git/info/exclude` at the highest-level dir (`.ai/`). Writes nothing
+ * private `.git/info/exclude` for ReasonGraph artifacts. Writes nothing
  * shared/committable, including agent instruction files.
  */
 function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
@@ -163,16 +189,16 @@ function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
 
   // `.git/info/exclude` (like .gitignore) can't hide already-tracked files —
   // warn but proceed so the mode still applies to everything not yet committed.
-  const tracked = trackedFilesUnder(repoRoot, ".ai");
+  const tracked = trackedFilesUnder(repoRoot, ".reasongraph/why");
   if (tracked.length) {
     warn(
-      `${tracked.length} file(s) under .ai/ are already git-tracked; the self-only ` +
-        "exclude can't hide them. Run `git rm --cached -r .ai` to untrack them yourself.",
+      `${tracked.length} file(s) under .reasongraph/why/ are already git-tracked; the self-only ` +
+        "exclude can't hide them. Untrack them yourself if they should remain private.",
     );
   }
   // Ignore personal why-packs and state.
   const excl = infoExcludePath(repoRoot);
-  if (excl) ensureBlock(excl, EXCLUDE_FENCE, [".ai/", ".reasongraph/state/"]);
+  if (excl) ensureBlock(excl, EXCLUDE_FENCE, [".reasongraph/why/", ".reasongraph/state/"]);
   else warn("could not resolve .git/info/exclude — artifacts were not ignored.");
 
 }
@@ -207,17 +233,17 @@ function ensureGitignore(repoRoot: string): void {
 const AGENTS_MD_BEGIN = "<!-- reasongraph:begin -->";
 const AGENTS_MD_END = "<!-- reasongraph:end -->";
 const AGENTS_MD_BLOCK = `${AGENTS_MD_BEGIN}
-## Design reasoning lives in \`.ai/why/\`
+## Design reasoning lives in \`.reasongraph/why/\`
 
-This repo records the *why* behind its code in \`.ai/why/<branch>.md\` ("why-packs"),
+This repo records the *why* behind its code in \`.reasongraph/why/<branch>.md\` ("why-packs"),
 distilled from AI coding sessions. **The why-pack is the ground truth for *why* —
 prefer it over commit messages, which are lossy and can be out of date.**
 
 - Before working on unfamiliar code, run \`reasongraph context <file>\` (or grep
-  \`.ai/why/\`) to see the decisions that touch it.
+  \`.reasongraph/why/\`) to see the decisions that touch it.
 - When asked what changed on a branch, or *why* something is the way it is, read
-  \`.ai/why/<branch>.md\` — not just \`git log\`.
-- \`grep -rn "agent-initiated" .ai/why/\` surfaces decisions an agent made
+  \`.reasongraph/why/<branch>.md\` — not just \`git log\`.
+- \`grep -rn "agent-initiated" .reasongraph/why/\` surfaces decisions an agent made
   unilaterally, with no human sign-off — scrutinize these first.
 
 Commits titled \`reasongraph: update why-pack (…)\` are written by the tool (the

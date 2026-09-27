@@ -1,15 +1,15 @@
 <!-- reasongraph:begin -->
-## Design reasoning lives in `.ai/why/`
+## Design reasoning lives in `.reasongraph/why/`
 
-This repo records the *why* behind its code in `.ai/why/<branch>.md` ("why-packs"),
+This repo records the *why* behind its code in `.reasongraph/why/<branch>.md` ("why-packs"),
 distilled from AI coding sessions. **The why-pack is the ground truth for *why* —
 prefer it over commit messages, which are lossy and can be out of date.**
 
 - Before working on unfamiliar code, run `reasongraph context <file>` (or grep
-  `.ai/why/`) to see the decisions that touch it.
+  `.reasongraph/why/`) to see the decisions that touch it.
 - When asked what changed on a branch, or *why* something is the way it is, read
-  `.ai/why/<branch>.md` — not just `git log`.
-- `grep -rn "agent-initiated" .ai/why/` surfaces decisions an agent made
+  `.reasongraph/why/<branch>.md` — not just `git log`.
+- `grep -rn "agent-initiated" .reasongraph/why/` surfaces decisions an agent made
   unilaterally, with no human sign-off — scrutinize these first.
 
 Commits titled `reasongraph: update why-pack (…)` are written by the tool (the

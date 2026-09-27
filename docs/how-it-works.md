@@ -24,7 +24,7 @@ Two commands, two jobs:
   It installs:
   - A git `pre-push` hook, chaining onto husky/lefthook rather than clobbering. Git hooks
     sit outside an agent plugin's lifecycle, so `init` owns this one.
-  - `.ai/why/` (committed shared artifact) and `.reasongraph/state/` (gitignored local state).
+  - `.reasongraph/why/` (committed shared artifact) and `.reasongraph/state/` (gitignored local state).
   - A shared `.reasongraph/config.json` ([config](CONFIG.md)) and a pointer in `AGENTS.md`
     telling agents to read the why-packs.
 
@@ -35,11 +35,11 @@ plugin install.
 **Adopting on an existing project?** If this machine already has Claude sessions for the repo,
 `init` offers to backfill them — distilling your local history so the pack is useful on day one.
 It's opt-in (default No, skipped in CI), distills only *your* local transcripts, and never
-commits: the result lands in `.ai/why/` for you to review.
+commits: the result lands in `.reasongraph/why/` for you to review.
 
 ## What's committed vs. what stays local
 
-Three things travel through git: the why-packs (`.ai/why/`), the team config
+Three things travel through git: the why-packs (`.reasongraph/why/`), the team config
 (`.reasongraph/config.json`), and the `AGENTS.md` pointer. Everything else stays on your
 machine — local state under `.reasongraph/state/` (gitignored), the git `pre-push` hook, and
 the agent plugin installed by `reasongraph install`. A fresh clone needs only `reasongraph
@@ -92,7 +92,7 @@ always visible in `reasongraph status`, never silent.
 The commit is a good citizen under parallel agents:
 
 - **It never touches your staging area.** It's assembled on a throwaway `GIT_INDEX_FILE` via
-  `commit-tree`, snapshotting *only* `.ai/why/` on top of `HEAD`. Your staged work — and any
+  `commit-tree`, snapshotting *only* `.reasongraph/why/` on top of `HEAD`. Your staged work — and any
   concurrent agent's — is never read, `git add`ed, or swept in.
 - **It's its own isolated commit**, titled `reasongraph: update why-pack (<branch>)` — safe to rebase
   past or drop. The `AGENTS.md` pointer tells agents not to amend it into a feature commit.
@@ -109,7 +109,7 @@ push). Teams that can't tolerate a tool authoring commits set `"sync": "manual"`
 Committed markdown is greppable by anyone:
 
 ```bash
-grep -rn "agent-initiated" .ai/why/     # decisions nobody signed off on
+grep -rn "agent-initiated" .reasongraph/why/     # decisions nobody signed off on
 reasongraph context lib/clerk/guests.ts    # entries whose Touches: globs match a path
 ```
 
@@ -118,7 +118,7 @@ the why-pack. Discretion is what killed the original prototype's write side ("pl
 decisions" lost to the task every time), so the read side is made mechanical the same way:
 
 - **The `AGENTS.md` pointer** (auto-loaded into every session) tells agents the *why* lives in
-  `.ai/why/`, that it's the ground truth over commit messages, and to run `reasongraph context <file>`
+  `.reasongraph/why/`, that it's the ground truth over commit messages, and to run `reasongraph context <file>`
   on unfamiliar code. This covers the "what changed / explain / review" moment.
 - **The edit-time `PreToolUse` hook** injects the matching entries right before an agent edits a
   file. This covers the "before you change this" moment, so a load-bearing decision surfaces before
@@ -126,4 +126,4 @@ decisions" lost to the task every time), so the read side is made mechanical the
 
 Read-side hook support depends on each agent's native plugin system. The plugin declares the
 ReasonGraph hooks once; `npx plugins` installs the components each detected target supports.
-The `.ai/why/` format stays plain Markdown, so every agent can still read it directly.
+The `.reasongraph/why/` format stays plain Markdown, so every agent can still read it directly.

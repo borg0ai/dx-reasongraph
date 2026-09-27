@@ -44,12 +44,12 @@ export function doctor(): number {
   if (!rt.cfg.selfOnly) {
     try {
       if (fs.readFileSync(path.join(rt.repoRoot, "AGENTS.md"), "utf8").includes("reasongraph:begin")) {
-        line(OK, "AGENTS.md points agents at .ai/why/");
+        line(OK, "AGENTS.md points agents at .reasongraph/why/");
       } else {
-        line(MEH, "AGENTS.md has no ReasonGraph pointer — re-run init so agents know to read .ai/why/");
+        line(MEH, "AGENTS.md has no ReasonGraph pointer — re-run init so agents know to read .reasongraph/why/");
       }
     } catch {
-      line(MEH, "no AGENTS.md — agents won't be told to read .ai/why/; re-run init");
+      line(MEH, "no AGENTS.md — agents won't be told to read .reasongraph/why/; re-run init");
     }
   }
 
@@ -80,12 +80,12 @@ export function doctor(): number {
   // Why-pack git freshness — the two axes that let GitHub silently lag. In
   // self-only mode nothing is committed by design, so those axes don't apply.
   if (rt.cfg.selfOnly) {
-    const tracked = trackedFilesUnder(rt.repoRoot, ".ai");
+    const tracked = trackedFilesUnder(rt.repoRoot, ".reasongraph/why");
     if (tracked.length) {
       line(
         BAD,
-        `self-only mode, but ${tracked.length} file(s) under .ai/ are already git-tracked — ` +
-          "the exclude can't hide them; run `git rm --cached -r .ai` to untrack",
+        `self-only mode, but ${tracked.length} file(s) under .reasongraph/why/ are already git-tracked — ` +
+          "the exclude can't hide them; untrack them if they should remain private",
       );
       problems++;
     } else {

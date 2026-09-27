@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "mapId": "reasongraph-why-storage",
+  "revision": 1,
+  "constraintDiscovery": {
+    "checkedAt": "2026-09-27T17:30:16Z",
+    "checkedPaths": [
+      "apps/cli/src/util/paths.ts",
+      "apps/cli/src/core/autocommit.ts",
+      "apps/cli/src/commands/init.ts",
+      "reasongraph/skills/reasongraph/SKILL.md"
+    ],
+    "uninspectedPaths": []
+  },
+  "constraints": [],
+  "project": {
+    "id": "reasongraph",
+    "name": "ReasonGraph"
+  },
+  "groups": [],
+  "modules": [
+    {
+      "id": "why-pack-store",
+      "role": "generic",
+      "roleAssessment": {
+        "basis": "out-of-taxonomy",
+        "note": "Markdown files in a repository directory act as the shared decision-history store."
+      },
+      "name": "Why-pack store",
+      "kind": "local",
+      "responsibility": "Stores one shared Markdown decision pack per branch under .reasongraph/why/.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": ".reasongraph/why"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/util/paths.ts",
+          "note": "whyDir resolves to .reasongraph/why."
+        },
+        {
+          "path": "apps/cli/src/core/autocommit.ts",
+          "note": "Git operations are scoped to .reasongraph/why."
+        },
+        {
+          "path": "reasongraph/skills/reasongraph/SKILL.md",
+          "note": "The installed skill directs agents to read packs from .reasongraph/why."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 0,
+        "column": 0
+      }
+    }
+  ],
+  "relationships": []
+}

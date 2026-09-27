@@ -63,7 +63,7 @@ test("end-to-end: distill a session into a why-pack that flags agent-initiated",
   assert.match(md, /lib\/clerk/);
 
   // The definition-of-done grep works.
-  const grep = spawnSync("grep", ["-r", "agent-initiated", path.join(repo, ".ai", "why")], { encoding: "utf8" });
+  const grep = spawnSync("grep", ["-r", "agent-initiated", path.join(repo, ".reasongraph", "why")], { encoding: "utf8" });
   assert.equal(grep.status, 0);
   assert.match(grep.stdout, /agent-initiated/);
 

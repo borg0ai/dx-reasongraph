@@ -80,7 +80,7 @@ test("init --self-only: excludes artifacts privately and touches no shared file"
   await inRepo(dir, () => init({ selfOnly: true }));
 
   const excl = read(dir, ".git/info/exclude");
-  assert.ok(excl.includes(".ai/"), "exclude ignores .ai/");
+  assert.ok(excl.includes(".reasongraph/why/"), "exclude ignores personal why-packs");
   assert.ok(excl.includes(".reasongraph/state/"), "exclude ignores local state");
 
   // Nothing reasongraph wrote shows up as committable in git status.
@@ -107,16 +107,53 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
   assert.ok(!read(dir, ".git/info/exclude").includes("reasongraph self-only"), "no private exclude");
 });
 
-test("init --self-only: warns when .ai/ is already tracked but still proceeds", async () => {
+test("init moves legacy why-packs into .reasongraph/why", async () => {
   const dir = tempRepo();
   fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".ai", "why", "old.md"), "# tracked\n");
-  git(dir, ["add", ".ai/why/old.md"]);
+  fs.writeFileSync(path.join(dir, ".ai", "why", "main.md"), "# legacy\n");
+
+  await inRepo(dir, () => init());
+
+  assert.equal(read(dir, ".reasongraph/why/main.md"), "# legacy\n");
+  assert.ok(!fs.existsSync(path.join(dir, ".ai", "why", "main.md")), "shared pack moved");
+});
+
+test("self-only init copies legacy why-packs and leaves source untouched", async () => {
+  const dir = tempRepo();
+  fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".ai", "why", "main.md"), "# legacy\n");
+
+  await inRepo(dir, () => init({ selfOnly: true }));
+
+  assert.equal(read(dir, ".reasongraph/why/main.md"), "# legacy\n");
+  assert.equal(read(dir, ".ai/why/main.md"), "# legacy\n");
+});
+
+test("init refuses legacy pack collisions without changing either file", async () => {
+  const dir = tempRepo();
+  fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
+  fs.mkdirSync(path.join(dir, ".reasongraph", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".ai", "why", "main.md"), "# legacy\n");
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "main.md"), "# current\n");
+
+  const { err, result } = await inRepo(dir, () => init());
+
+  assert.equal(result, 1);
+  assert.match(err, /destination already has main\.md/);
+  assert.equal(read(dir, ".ai/why/main.md"), "# legacy\n");
+  assert.equal(read(dir, ".reasongraph/why/main.md"), "# current\n");
+});
+
+test("init --self-only: warns when .reasongraph/why is already tracked but still proceeds", async () => {
+  const dir = tempRepo();
+  fs.mkdirSync(path.join(dir, ".reasongraph", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "old.md"), "# tracked\n");
+  git(dir, ["add", ".reasongraph/why/old.md"]);
   git(dir, ["commit", "-qm", "add why"]);
 
   const { err } = await inRepo(dir, () => init({ selfOnly: true }));
   assert.match(err, /track/i, "warns about already-tracked files");
-  assert.ok(read(dir, ".git/info/exclude").includes(".ai/"), "still writes the exclude");
+  assert.ok(read(dir, ".git/info/exclude").includes(".reasongraph/why/"), "still writes the exclude");
 });
 
 test("init --self-only is idempotent on re-run (no duplicate exclude block)", async () => {
@@ -132,8 +169,8 @@ test("sync under self-only: distills but never commits", async () => {
   const dir = tempRepo();
   fs.mkdirSync(path.join(dir, ".reasongraph", "state"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".reasongraph", "state", "config.json"), JSON.stringify({ selfOnly: true }));
-  fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".ai", "why", "main.md"), "# why\n");
+  fs.mkdirSync(path.join(dir, ".reasongraph", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "main.md"), "# why\n");
 
   const head0 = git(dir, ["rev-parse", "HEAD"]);
   const { out } = await inRepo(dir, () => sync());
@@ -160,11 +197,11 @@ test("status under self-only reports the mode, not commit/push nags", async () =
   assert.ok(!/uncommitted change/i.test(out), "no uncommitted nag in self-only");
 });
 
-test("status under self-only warns instead of reassuring when .ai/ is already tracked", async () => {
+test("status under self-only warns instead of reassuring when why-packs are already tracked", async () => {
   const dir = tempRepo();
-  fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".ai", "why", "old.md"), "# tracked\n");
-  git(dir, ["add", ".ai/why/old.md"]);
+  fs.mkdirSync(path.join(dir, ".reasongraph", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "old.md"), "# tracked\n");
+  git(dir, ["add", ".reasongraph/why/old.md"]);
   git(dir, ["commit", "-qm", "add why"]);
 
   await inRepo(dir, () => init({ selfOnly: true }));
@@ -181,11 +218,11 @@ test("doctor under self-only reports OK when nothing is tracked", async () => {
   assert.equal(result, 0);
 });
 
-test("doctor under self-only flags a problem when .ai/ is already tracked", async () => {
+test("doctor under self-only flags a problem when why-packs are already tracked", async () => {
   const dir = tempRepo();
-  fs.mkdirSync(path.join(dir, ".ai", "why"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".ai", "why", "old.md"), "# tracked\n");
-  git(dir, ["add", ".ai/why/old.md"]);
+  fs.mkdirSync(path.join(dir, ".reasongraph", "why"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".reasongraph", "why", "old.md"), "# tracked\n");
+  git(dir, ["add", ".reasongraph/why/old.md"]);
   git(dir, ["commit", "-qm", "add why"]);
 
   await inRepo(dir, () => init({ selfOnly: true }));

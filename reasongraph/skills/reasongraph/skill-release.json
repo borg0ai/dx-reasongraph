@@ -4,7 +4,7 @@
   "channel": "development",
   "version": "0.1.0-dev.0",
   "source": {
-    "repository": "https://github.com/evansjp/reasongraph"
+    "repository": "https://github.com/borg0ai/dx-reasongraph"
   },
-  "updateManifestUrl": "https://evansjp.github.io/reasongraph/skill-updates/reasongraph/development.json"
+  "updateManifestUrl": "https://borg0ai.github.io/reasongraph/skill-updates/reasongraph/development.json"
 }

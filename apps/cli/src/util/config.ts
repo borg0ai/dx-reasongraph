@@ -39,7 +39,7 @@ export interface reasongraphConfig {
   };
   /**
    * How the why-pack reaches git.
-   * - "auto" (default): commit `.ai/why/` — never push — at settle points
+   * - "auto" (default): commit `.reasongraph/why/` — never push — at settle points
    *   (session end and the pre-push sweep), built via a scratch index that never
    *   touches your staging area, so it rides your next push and GitHub stops
    *   silently lagging. A local commit isn't sharing; push stays the human gate.

@@ -1,6 +1,6 @@
 # RFC 0004: Move why-packs into .reasongraph/why
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Summary
 

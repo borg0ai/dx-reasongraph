@@ -2,19 +2,17 @@ import * as path from "node:path";
 import * as os from "node:os";
 
 /**
- * All repo-relative locations ReasonGraph uses. `.ai/why/` is committed;
- * `.reasongraph/` holds repo configuration and gitignored local state.
+ * All repo-relative locations ReasonGraph uses. `.reasongraph/why/` is the
+ * shared decision history; `.reasongraph/state/` is local state.
  */
 export function reasongraphPaths(repoRoot: string) {
-  const aiDir = path.join(repoRoot, ".ai");
   const reasongraphDir = path.join(repoRoot, ".reasongraph");
   const stateDir = path.join(reasongraphDir, "state");
   return {
     repoRoot,
-    aiDir,
     reasongraphDir,
-    /** Committed why-packs, one markdown file per branch. */
-    whyDir: path.join(aiDir, "why"),
+    /** Why-packs, one markdown file per branch. */
+    whyDir: path.join(reasongraphDir, "why"),
     /** Local, gitignored state directory. */
     stateDir,
     /** State file reserved for the current on-disk state format. */

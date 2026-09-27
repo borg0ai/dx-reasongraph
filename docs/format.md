@@ -1,6 +1,6 @@
 # The why-pack format
 
-One rolling file per branch: `.ai/why/<branch-slug>.md` (`main` sessions → `.ai/why/main.md`).
+One rolling file per branch: `.reasongraph/why/<branch-slug>.md` (`main` sessions → `.reasongraph/why/main.md`).
 Plain markdown, boring on purpose — optimized for `grep` and human skimming.
 
 Each decision is one entry:
