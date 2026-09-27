@@ -9,10 +9,18 @@
     "release": "qingniao",
     "build": "pnpm --filter @borg0ai/reasongraph build",
     "typecheck": "pnpm --filter @borg0ai/reasongraph typecheck",
-    "test": "pnpm --filter @borg0ai/reasongraph test"
+    "test": "pnpm --filter @borg0ai/reasongraph test",
+    "lint": "eslint \"apps/cli/src/**/*.ts\" \"apps/cli/test/**/*.ts\"",
+    "format": "prettier --write package.json qingniao.config.json eslint.config.mjs .changeset/config.json .changeset/bright-seas-reason.md",
+    "format:check": "prettier --check package.json qingniao.config.json eslint.config.mjs .changeset/config.json .changeset/bright-seas-reason.md"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
-    "@systembug/qingniao": "^0.0.14"
+    "@eslint/js": "^10.0.1",
+    "@systembug/qingniao": "^0.1.15",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript-eslint": "^8.70.1"
   }
 }

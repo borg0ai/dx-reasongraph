@@ -5,3 +5,6 @@ node_modules/
 
 # ReasonGraph local state
 .reasongraph/state/
+
+# Playwright MCP snapshots from local browser review
+.playwright-mcp/

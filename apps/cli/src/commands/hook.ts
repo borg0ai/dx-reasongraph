@@ -15,7 +15,6 @@ import { distillSession } from "../core/distillSession.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
 import { autoCommitWhyPack, whyPackGitStatus } from "../core/autocommit.js";
 import { matchSessionToBranches } from "../matching.js";
-import { relative } from "node:path";
 import { isNonInteractive, waitForEnter } from "../util/tty.js";
 
 interface HookInput {

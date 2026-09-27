@@ -2,23 +2,142 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "reasongraph-why-storage",
-  "revision": 1,
+  "revision": 2,
   "constraintDiscovery": {
-    "checkedAt": "2026-09-27T17:30:16Z",
+    "checkedAt": "2026-09-27T18:32:00Z",
     "checkedPaths": [
+      ".spec/rfc/completed/0007-agent-transcript-adapters.md",
+      "apps/cli/src/adapters/index.ts",
+      "apps/cli/src/adapters/types.ts",
+      "apps/cli/src/adapters/names.ts",
+      "apps/cli/src/adapters/codex.ts",
+      "apps/cli/src/adapters/opencode.ts",
+      "apps/cli/src/adapters/cursor-agent.ts",
+      "apps/cli/src/core/sweep.ts",
+      "apps/cli/src/core/distillSession.ts",
+      "apps/cli/src/state/state.ts",
+      "apps/cli/src/commands/hook.ts",
+      "apps/cli/src/commands/status.ts",
       "apps/cli/src/util/paths.ts",
       "apps/cli/src/core/autocommit.ts",
-      "apps/cli/src/commands/init.ts",
       "reasongraph/skills/reasongraph/SKILL.md"
     ],
-    "uninspectedPaths": []
+    "uninspectedPaths": [
+      ".spec/rfc/0005-multi-agent-skill-install.md",
+      ".spec/rfc/0006-promptscript-reviewer-agent.md",
+      "apps/cli/src/distiller",
+      "reasongraph/hooks/hooks.json"
+    ]
   },
-  "constraints": [],
+  "constraints": [
+    {
+      "id": "freshness-in-adapter",
+      "name": "Decide transcript freshness inside the adapter",
+      "note": "RFC 0007: sweep, status, and hook must not treat file size as new activity. Applies to every tool the write side distills.",
+      "origin": "local",
+      "strength": "required",
+      "applicability": "applicable",
+      "scope": "modules",
+      "modules": ["transcript-adapters", "settle-commands"],
+      "relationships": [],
+      "evidence": [
+        {
+          "path": ".spec/rfc/completed/0007-agent-transcript-adapters.md",
+          "line": 37,
+          "quote": "Call sites in `apps/cli/src/core/sweep.ts`, `apps/cli/src/commands/status.ts`, and `apps/cli/src/commands/hook.ts` stop calling `fileSize` themselves.",
+          "note": "Implemented freshness contract."
+        }
+      ],
+      "verification": "Confirm sweep, status, and hook call hasNewActivity or unreadBytes. agentAdapters.test.ts covers the OpenCode case where file size is unchanged."
+    },
+    {
+      "id": "opencode-message-cursor",
+      "name": "OpenCode cursor is the last session_message id",
+      "note": "Absence means never distilled. last_distilled_offset stays the JSONL byte offset so Claude records do not migrate.",
+      "origin": "local",
+      "strength": "required",
+      "applicability": "applicable",
+      "scope": "modules",
+      "modules": ["session-state", "transcript-adapters"],
+      "relationships": [],
+      "evidence": [
+        {
+          "path": ".spec/rfc/completed/0007-agent-transcript-adapters.md",
+          "line": 39,
+          "quote": "The field is the last `session_message` id included.",
+          "note": "Cursor field on the session record."
+        },
+        {
+          "path": "apps/cli/src/state/state.ts",
+          "line": 22,
+          "symbol": "last_distilled_cursor",
+          "note": "Optional string on SessionRecord."
+        }
+      ],
+      "verification": "Second distill in agentAdapters.test.ts reads only rows after last_distilled_cursor."
+    },
+    {
+      "id": "claude-hooks-only",
+      "name": "Native hooks stay Claude Code only",
+      "note": "Codex, OpenCode, and cursor-agent settle through reasongraph distill and sync until a later RFC maps their hook names.",
+      "origin": "local",
+      "strength": "required",
+      "applicability": "applicable",
+      "scope": "modules",
+      "modules": ["settle-commands"],
+      "relationships": [],
+      "evidence": [
+        {
+          "path": ".spec/rfc/completed/0007-agent-transcript-adapters.md",
+          "line": 28,
+          "quote": "reasongraph/hooks/hooks.json stays the Claude Code hook manifest.",
+          "note": "Explicit non-goal of RFC 0007."
+        }
+      ],
+      "verification": "hooks.json still lists Claude Code hook names. This map did not re-read that file; see uninspectedPaths."
+    },
+    {
+      "id": "skip-cursor-store-db",
+      "name": "Do not decode cursor-agent store.db",
+      "note": "The JSONL export is the transcript. IDE state.vscdb chats are also out of scope.",
+      "origin": "local",
+      "strength": "required",
+      "applicability": "applicable",
+      "scope": "modules",
+      "modules": ["transcript-adapters"],
+      "relationships": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/adapters/cursor-agent.ts",
+          "line": 52,
+          "quote": "store.db blobs are not read.",
+          "note": "Adapter comment matches the RFC non-goal."
+        }
+      ],
+      "verification": "CursorAgentAdapter.discoverSessions only accepts <id>/<id>.jsonl."
+    }
+  ],
   "project": {
     "id": "reasongraph",
-    "name": "ReasonGraph"
+    "name": "ReasonGraph",
+    "revision": "61de2ce926d650de44fb7e500b1c74c145a21ffe"
   },
-  "groups": [],
+  "groups": [
+    {
+      "id": "write-side",
+      "name": "Write side",
+      "role": "runtime",
+      "members": ["settle-commands", "transcript-adapters", "distill-session", "session-state"],
+      "evidence": [
+        {
+          "path": ".spec/rfc/completed/0007-agent-transcript-adapters.md",
+          "line": 15,
+          "quote": "This RFC is only the missing write side.",
+          "note": "Discovery, freshness, distillation, and session cursors are one execution path into the why-pack."
+        }
+      ]
+    }
+  ],
   "modules": [
     {
       "id": "why-pack-store",
@@ -29,7 +148,7 @@
       },
       "name": "Why-pack store",
       "kind": "local",
-      "responsibility": "Stores one shared Markdown decision pack per branch under .reasongraph/why/.",
+      "responsibility": "Stores one shared Markdown decision pack per branch under .reasongraph/why/. The read side does not care which agent wrote the session.",
       "ownership": [
         {
           "kind": "directory",
@@ -52,11 +171,235 @@
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": {
-        "row": 0,
-        "column": 0
-      }
+      "layout": { "row": 1, "column": 2 }
+    },
+    {
+      "id": "transcript-adapters",
+      "role": "backend",
+      "name": "Transcript adapters",
+      "kind": "local",
+      "responsibility": "Discovers sessions for the current repo and normalizes them into user_text, assistant_text, thinking, and tool_call_summary. Active tools are Claude Code, Codex, OpenCode, and cursor-agent. JSONL adapters keep a byte offset. OpenCode reads session_v2 and session_message and ignores a legacy session table.",
+      "ownership": [
+        { "kind": "directory", "path": "apps/cli/src/adapters" }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/adapters/index.ts",
+          "line": 8,
+          "symbol": "ADAPTERS",
+          "note": "ADAPTERS lists the four tools. STUBBED_ADAPTERS is empty."
+        },
+        {
+          "path": "apps/cli/src/adapters/opencode.ts",
+          "line": 30,
+          "symbol": "SESSION_SQL",
+          "quote": "SELECT id, directory, path FROM session_v2",
+          "note": "Live OpenCode schema used on this machine."
+        },
+        {
+          "path": "apps/cli/src/adapters/codex.ts",
+          "line": 84,
+          "note": "Codex JSONL is matched on session_meta cwd."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 0, "column": 1 }
+    },
+    {
+      "id": "session-state",
+      "role": "database",
+      "name": "Session state",
+      "kind": "local",
+      "responsibility": "Persists one record per session, including last_distilled_offset for JSONL and last_distilled_cursor for OpenCode. The map key is the session id shared databases need.",
+      "ownership": [
+        { "kind": "file", "path": "apps/cli/src/state/state.ts" }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/state/state.ts",
+          "line": 20,
+          "symbol": "SessionRecord",
+          "note": "Offset stays numeric. Cursor is an optional message id."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 1, "column": 1 }
+    },
+    {
+      "id": "distill-session",
+      "role": "backend",
+      "name": "Session distill",
+      "kind": "local",
+      "responsibility": "Reads only the undistilled span through readNew and merges normalized events into the branch why-pack. A truncated distill does not advance either cursor.",
+      "ownership": [
+        { "kind": "file", "path": "apps/cli/src/core/distillSession.ts" }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/core/distillSession.ts",
+          "line": 83,
+          "symbol": "readNew",
+          "note": "The state-map key is passed as session_id."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 1, "column": 0 }
+    },
+    {
+      "id": "settle-commands",
+      "role": "backend",
+      "name": "Settle commands",
+      "kind": "local",
+      "responsibility": "Sweep, status, and the Claude Stop hook ask the adapter whether a session grew. Codex, OpenCode, and cursor-agent have no native hooks; they settle through distill and sync.",
+      "ownership": [
+        { "kind": "file", "path": "apps/cli/src/core/sweep.ts" },
+        { "kind": "file", "path": "apps/cli/src/commands/status.ts" },
+        { "kind": "file", "path": "apps/cli/src/commands/hook.ts" }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/core/sweep.ts",
+          "line": 62,
+          "symbol": "sessionHasNewActivity",
+          "note": "Freshness is delegated to adapterFor(rec.tool)."
+        },
+        {
+          "path": "apps/cli/src/commands/hook.ts",
+          "line": 159,
+          "symbol": "unreadBytes",
+          "note": "Stop-hook growth uses unread bytes, not file size."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 0, "column": 0 }
+    },
+    {
+      "id": "agent-transcripts",
+      "role": "database",
+      "name": "Agent transcripts",
+      "kind": "external",
+      "responsibility": "Private transcripts outside the repo: Codex JSONL, OpenCode sqlite, and cursor-agent JSONL. cursor-agent store.db is not part of this store for ReasonGraph.",
+      "ownership": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/adapters/cursor-agent.ts",
+          "line": 51,
+          "note": "Discovery is limited to the JSONL export under ~/.cursor/projects."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 0, "column": 2 }
     }
   ],
-  "relationships": []
+  "relationships": [
+    {
+      "id": "settle-asks-adapter",
+      "from": "settle-commands",
+      "to": "transcript-adapters",
+      "kind": "request",
+      "visibility": "overview",
+      "label": "Ask whether the session grew",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/core/sweep.ts",
+          "line": 63,
+          "symbol": "sessionHasNewActivity",
+          "note": "Status uses the same helper."
+        }
+      ]
+    },
+    {
+      "id": "hook-fires-distill",
+      "from": "settle-commands",
+      "to": "distill-session",
+      "kind": "control",
+      "visibility": "overview",
+      "label": "Fire distill when unread crosses the threshold",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/commands/hook.ts",
+          "line": 161,
+          "note": "Claude Stop hook only. Other tools are not hooked."
+        }
+      ]
+    },
+    {
+      "id": "distill-reads-span",
+      "from": "distill-session",
+      "to": "transcript-adapters",
+      "kind": "request",
+      "visibility": "overview",
+      "label": "Read the undistilled span",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/core/distillSession.ts",
+          "line": 83,
+          "symbol": "readNew",
+          "note": "Cursor advances only when the distill is not truncated."
+        }
+      ]
+    },
+    {
+      "id": "distill-uses-cursor",
+      "from": "distill-session",
+      "to": "session-state",
+      "kind": "dependency",
+      "visibility": "overview",
+      "label": "Store the byte offset and message cursor",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/state/state.ts",
+          "line": 21,
+          "symbol": "last_distilled_cursor",
+          "note": "Both fields are written back on a completed distill."
+        }
+      ]
+    },
+    {
+      "id": "distill-writes-pack",
+      "from": "distill-session",
+      "to": "why-pack-store",
+      "kind": "result",
+      "visibility": "overview",
+      "label": "Merge decisions into the branch pack",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/core/distillSession.ts",
+          "note": "A rendered pack is written under .reasongraph/why when the merge changes."
+        }
+      ]
+    },
+    {
+      "id": "adapters-read-transcripts",
+      "from": "transcript-adapters",
+      "to": "agent-transcripts",
+      "kind": "dependency",
+      "visibility": "overview",
+      "label": "Read sessions whose cwd is this repo",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/adapters/codex.ts",
+          "line": 101,
+          "note": "Codex keeps a session only when session_meta cwd matches the repo."
+        }
+      ]
+    }
+  ]
 }
