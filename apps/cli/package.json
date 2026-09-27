@@ -1,6 +1,6 @@
 {
   "name": "@borg0ai/reasongraph",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Repository decision history CLI for coding agents.",
   "type": "module",
   "author": "Borg0 AI",
