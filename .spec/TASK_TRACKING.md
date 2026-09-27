@@ -1,5 +1,11 @@
 # Task Tracking
 
+## Active
+
+- [ ] Implement RFC 0004: Move why-packs into .reasongraph/why (RFC 0004)
+- [ ] Implement RFC 0005: Install the ReasonGraph skill for every detected agent (RFC 0005)
+- [ ] Implement RFC 0006: Ship a why-pack-aware reviewer agent via PromptScript (RFC 0006, depends on 0005)
+
 ## Done
 - [x] Implement RFC 0001: ReasonGraph CLI and plugin redesign (Umbrella) (RFC 0001)
   - [x] Implement RFC 0002: Move CLI to apps/cli and publish scoped npm package (child of 0001) (RFC 0002)
