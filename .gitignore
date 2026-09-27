@@ -1,0 +1,7 @@
+node_modules/
+**/dist/
+**/dist-test/
+*.tsbuildinfo
+
+# ReasonGraph local state
+.reasongraph/state/

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "skillId": "reasongraph",
+  "channel": "development",
+  "version": "0.1.0-dev.0",
+  "source": {
+    "repository": "https://github.com/evansjp/reasongraph"
+  },
+  "updateManifestUrl": "https://evansjp.github.io/reasongraph/skill-updates/reasongraph/development.json"
+}
