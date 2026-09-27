@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { readFileSync, realpathSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { init } from "./commands/init.js";
 import { distill } from "./commands/distill.js";
 import { status } from "./commands/status.js";
@@ -11,9 +13,9 @@ import { uninstall } from "./commands/uninstall.js";
 import { hookStop, hookSessionEnd, hookPrePush, hookPreToolUse } from "./commands/hook.js";
 import { install } from "./commands/install.js";
 
-declare const __REASONGRAPH_VERSION__: string;
-
-const VERSION = __REASONGRAPH_VERSION__;
+const packageJsonPath = resolve(dirname(realpathSync(process.argv[1]!)), "../package.json");
+const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string };
+const VERSION = packageJson.version;
 
 function parseFlags(args: string[]): { flags: Record<string, string | boolean>; positional: string[] } {
   const flags: Record<string, string | boolean> = {};
