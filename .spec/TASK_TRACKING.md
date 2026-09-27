@@ -4,6 +4,7 @@
 
 - [ ] Implement RFC 0005: Install the ReasonGraph skill for every detected agent (RFC 0005)
 - [ ] Implement RFC 0006: Ship a why-pack-aware reviewer agent via PromptScript (RFC 0006, depends on 0005)
+- [ ] Implement RFC 0007: Distill Codex, OpenCode, and cursor-agent sessions (RFC 0007)
 
 ## Done
 - [x] Implement RFC 0001: ReasonGraph CLI and plugin redesign (Umbrella) (RFC 0001)

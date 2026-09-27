@@ -8,3 +8,4 @@
 | 0004 | [Move why-packs into .reasongraph/why](rfc/completed/0004-reasongraph-why-pack-storage.md) | Implemented |
 | 0005 | [Install the ReasonGraph skill for every detected agent](rfc/0005-multi-agent-skill-install.md) | Draft |
 | 0006 | [Ship a why-pack-aware reviewer agent via PromptScript](rfc/0006-promptscript-reviewer-agent.md) | Draft |
+| 0007 | [Distill Codex, OpenCode, and cursor-agent sessions](rfc/0007-agent-transcript-adapters.md) | Draft |
