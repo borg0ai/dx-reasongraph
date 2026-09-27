@@ -81,17 +81,15 @@ test("init --self-only: excludes artifacts privately and touches no shared file"
 
   const excl = read(dir, ".git/info/exclude");
   assert.ok(excl.includes(".ai/"), "exclude ignores .ai/");
-  assert.ok(excl.includes("CLAUDE.local.md"), "exclude ignores CLAUDE.local.md");
   assert.ok(excl.includes(".reasongraph/state/"), "exclude ignores local state");
 
   // Nothing reasongraph wrote shows up as committable in git status.
   assert.equal(git(dir, ["status", "--porcelain"]), "", "no reasongraph artifacts left visible to git");
 
-  assert.ok(read(dir, "CLAUDE.local.md").includes(".ai/why/"), "personal pointer written");
+  assert.ok(!fs.existsSync(path.join(dir, "AGENTS.md")), "self-only does not write shared agent instructions");
 
   // No shared/committable files created or modified.
   assert.ok(!fs.existsSync(path.join(dir, ".reasongraph", "config.json")), "no shared config");
-  assert.ok(!read(dir, "CLAUDE.md").includes("reasongraph:begin"), "committed CLAUDE.md untouched");
   assert.ok(!read(dir, ".gitignore").includes(".reasongraph/state/"), "shared .gitignore untouched");
 
   // Mode persisted locally; plugin hooks are installed by `reasongraph install`.
@@ -105,7 +103,7 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
 
   assert.ok(fs.existsSync(path.join(dir, ".reasongraph", "config.json")), "shared config written");
   assert.ok(read(dir, ".gitignore").includes(".reasongraph/state/"), "shared gitignore written");
-  assert.ok(read(dir, "CLAUDE.md").includes("reasongraph:begin"), "committed pointer written");
+  assert.ok(read(dir, "AGENTS.md").includes("reasongraph:begin"), "committed pointer written");
   assert.ok(!read(dir, ".git/info/exclude").includes("reasongraph self-only"), "no private exclude");
 });
 
@@ -151,7 +149,7 @@ test("uninstall removes the private exclude and pointer blocks", async () => {
   await inRepo(dir, () => uninstall());
 
   assert.ok(!read(dir, ".git/info/exclude").includes("reasongraph self-only"), "exclude block gone");
-  assert.ok(!fs.existsSync(path.join(dir, "CLAUDE.local.md")), "pointer-only file removed");
+  assert.ok(!fs.existsSync(path.join(dir, "AGENTS.md")), "no shared pointer created");
 });
 
 test("status under self-only reports the mode, not commit/push nags", async () => {

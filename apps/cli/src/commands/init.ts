@@ -10,7 +10,6 @@ import {
   ensureBlock,
   infoExcludePath,
   EXCLUDE_FENCE,
-  CLAUDE_LOCAL_FENCE,
 } from "../util/exclude.js";
 import { say, warn } from "../util/log.js";
 import { readState } from "../state/state.js";
@@ -54,9 +53,8 @@ export async function init(opts: InitOptions = {}): Promise<number> {
     setupShared(repoRoot, paths);
   }
 
-  // 3b. Read-side pointer. Committed CLAUDE.md for teams; personal
-  //     CLAUDE.local.md (git-excluded) in self-only mode.
-  const claudeMdResult = selfOnly ? "CLAUDE.local.md (personal)" : ensureClaudeMd(repoRoot);
+  // Shared pointer belongs in the agent instruction file loaded by this repo.
+  const agentsMdResult = selfOnly ? "skipped (self-only)" : ensureAgentsMd(repoRoot);
 
   // Agent lifecycle hooks are owned by the installed ReasonGraph plugin.
   // Git pre-push is outside agent plugin lifecycle, so init owns it.
@@ -69,13 +67,13 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   say("Installed:");
   if (selfOnly) {
     say(`  • .ai/why/            personal why-packs (never committed)`);
-    say(`  • .git/info/exclude   ignores .ai/ and CLAUDE.local.md (private)`);
-    say(`  • CLAUDE.local.md     ${claudeMdResult} (tells your agents to read .ai/why/)`);
+    say(`  • .git/info/exclude   ignores .ai/ (private)`);
+    say(`  • AGENTS.md pointer   skipped in self-only mode`);
   } else {
     say(`  • .ai/why/            shared why-packs (committed — this is what everyone reads)`);
     say(`  • .reasongraph/config.json team config (committed)`);
     say(`  • .reasongraph/state/    local state (gitignored)`);
-    say(`  • CLAUDE.md pointer   ${claudeMdResult} (tells agents to read .ai/why/)`);
+    say(`  • AGENTS.md pointer   ${agentsMdResult} (tells agents to read .ai/why/)`);
   }
   say("  • Agent hooks         run `reasongraph install` to install the plugin");
   say(`  • git pre-push hook   ${prePushResult}`);
@@ -153,19 +151,10 @@ function setupShared(repoRoot: string, paths: reasongraphPaths): void {
   ensureGitignore(repoRoot);
 }
 
-const CLAUDE_LOCAL_POINTER = [
-  "## Design reasoning lives in `.ai/why/` (personal)",
-  "",
-  "reasongraph runs here in self-only mode: it distills the *why* behind changes into",
-  "`.ai/why/<branch>.md` as personal, git-excluded notes (never committed). Before",
-  "working on unfamiliar code, run `reasongraph context <file>` or grep `.ai/why/` to",
-  "see the decisions that touch it.",
-];
-
 /**
  * Personal setup: persist the mode locally, ignore artifacts via the repo's
- * private `.git/info/exclude` at the highest-level dir (`.ai/`), and drop a
- * read-side pointer in CLAUDE.local.md. Writes nothing shared/committable.
+ * private `.git/info/exclude` at the highest-level dir (`.ai/`). Writes nothing
+ * shared/committable, including agent instruction files.
  */
 function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
   const local = readLocalConfig(paths);
@@ -181,12 +170,11 @@ function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
         "exclude can't hide them. Run `git rm --cached -r .ai` to untrack them yourself.",
     );
   }
-  // Ignore personal why-packs, state, and pointer.
+  // Ignore personal why-packs and state.
   const excl = infoExcludePath(repoRoot);
-  if (excl) ensureBlock(excl, EXCLUDE_FENCE, [".ai/", ".reasongraph/state/", "CLAUDE.local.md"]);
+  if (excl) ensureBlock(excl, EXCLUDE_FENCE, [".ai/", ".reasongraph/state/"]);
   else warn("could not resolve .git/info/exclude — artifacts were not ignored.");
 
-  ensureBlock(path.join(repoRoot, "CLAUDE.local.md"), CLAUDE_LOCAL_FENCE, CLAUDE_LOCAL_POINTER);
 }
 
 function readLocalConfig(paths: reasongraphPaths): Record<string, unknown> {
@@ -216,9 +204,9 @@ function ensureGitignore(repoRoot: string): void {
   fs.appendFileSync(file, `${prefix}\n# ReasonGraph local state (per-machine)\n${missing.join("\n")}\n`);
 }
 
-const CLAUDE_MD_BEGIN = "<!-- reasongraph:begin -->";
-const CLAUDE_MD_END = "<!-- reasongraph:end -->";
-const CLAUDE_MD_BLOCK = `${CLAUDE_MD_BEGIN}
+const AGENTS_MD_BEGIN = "<!-- reasongraph:begin -->";
+const AGENTS_MD_END = "<!-- reasongraph:end -->";
+const AGENTS_MD_BLOCK = `${AGENTS_MD_BEGIN}
 ## Design reasoning lives in \`.ai/why/\`
 
 This repo records the *why* behind its code in \`.ai/why/<branch>.md\` ("why-packs"),
@@ -235,38 +223,37 @@ prefer it over commit messages, which are lossy and can be out of date.**
 Commits titled \`reasongraph: update why-pack (…)\` are written by the tool (the
 why-pack only, via a scratch index — they never touch your staged work). They're
 safe to rebase past or drop; don't amend them into your feature commits.
-${CLAUDE_MD_END}`;
+${AGENTS_MD_END}`;
 
 /**
- * Point agents at the why-packs from CLAUDE.md — the file Claude Code auto-loads
- * into every session. This is the read-side trigger for the "explain / review /
+ * Point agents at the why-packs from AGENTS.md. This is the read-side trigger for the "explain / review /
  * what changed" moments, which are conversations, not edits, so no PreToolUse
  * hook fires. Idempotent; never clobbers existing content.
  */
-export function ensureClaudeMd(repoRoot: string): string {
-  const file = path.join(repoRoot, "CLAUDE.md");
+export function ensureAgentsMd(repoRoot: string): string {
+  const file = path.join(repoRoot, "AGENTS.md");
   let existing = "";
   try {
     existing = fs.readFileSync(file, "utf8");
   } catch {
-    /* no CLAUDE.md yet */
+    /* no AGENTS.md yet */
   }
-  if (existing.includes(CLAUDE_MD_BEGIN)) {
+  if (existing.includes(AGENTS_MD_BEGIN)) {
     // Refresh the managed block in place if it's out of date (e.g. this machine
     // upgraded reasongraph). Only our marked region is touched; the rest is the
     // user's. Idempotent when already current.
-    const re = new RegExp(`${escapeRe(CLAUDE_MD_BEGIN)}[\\s\\S]*?${escapeRe(CLAUDE_MD_END)}`);
+    const re = new RegExp(`${escapeRe(AGENTS_MD_BEGIN)}[\\s\\S]*?${escapeRe(AGENTS_MD_END)}`);
     const current = existing.match(re)?.[0];
-    if (current === CLAUDE_MD_BLOCK) return "already present";
-    writeFileAtomic(file, existing.replace(re, CLAUDE_MD_BLOCK));
+    if (current === AGENTS_MD_BLOCK) return "already present";
+    writeFileAtomic(file, existing.replace(re, AGENTS_MD_BLOCK));
     return "updated";
   }
   if (!existing.trim()) {
-    fs.writeFileSync(file, CLAUDE_MD_BLOCK + "\n");
+    fs.writeFileSync(file, AGENTS_MD_BLOCK + "\n");
     return "created";
   }
   const prefix = existing.endsWith("\n") ? "" : "\n";
-  fs.appendFileSync(file, `${prefix}\n${CLAUDE_MD_BLOCK}\n`);
+  fs.appendFileSync(file, `${prefix}\n${AGENTS_MD_BLOCK}\n`);
   return "appended";
 }
 

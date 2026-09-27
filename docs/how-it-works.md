@@ -25,7 +25,7 @@ Two commands, two jobs:
   - A git `pre-push` hook, chaining onto husky/lefthook rather than clobbering. Git hooks
     sit outside an agent plugin's lifecycle, so `init` owns this one.
   - `.ai/why/` (committed shared artifact) and `.reasongraph/state/` (gitignored local state).
-  - A shared `.reasongraph/config.json` ([config](CONFIG.md)) and a pointer in `CLAUDE.md`
+  - A shared `.reasongraph/config.json` ([config](CONFIG.md)) and a pointer in `AGENTS.md`
     telling agents to read the why-packs.
 
 `init` deliberately does *not* install the plugin. The split keeps the two lifecycles
@@ -40,7 +40,7 @@ commits: the result lands in `.ai/why/` for you to review.
 ## What's committed vs. what stays local
 
 Three things travel through git: the why-packs (`.ai/why/`), the team config
-(`.reasongraph/config.json`), and the `CLAUDE.md` pointer. Everything else stays on your
+(`.reasongraph/config.json`), and the `AGENTS.md` pointer. Everything else stays on your
 machine — local state under `.reasongraph/state/` (gitignored), the git `pre-push` hook, and
 the agent plugin installed by `reasongraph install`. A fresh clone needs only `reasongraph
 init` to be useful; the plugin install is per-machine, not per-repo.
@@ -95,7 +95,7 @@ The commit is a good citizen under parallel agents:
   `commit-tree`, snapshotting *only* `.ai/why/` on top of `HEAD`. Your staged work — and any
   concurrent agent's — is never read, `git add`ed, or swept in.
 - **It's its own isolated commit**, titled `reasongraph: update why-pack (<branch>)` — safe to rebase
-  past or drop. The `CLAUDE.md` pointer tells agents not to amend it into a feature commit.
+  past or drop. The `AGENTS.md` pointer tells agents not to amend it into a feature commit.
 - **It refuses in ambiguous states** — detached HEAD, mid-merge/rebase, or when *you've* staged
   why-pack changes (you're mid-review) — and retries at the next settle point.
 
@@ -117,7 +117,7 @@ But grepping only helps if an agent *looks* — and left alone, an agent reaches
 the why-pack. Discretion is what killed the original prototype's write side ("please log your
 decisions" lost to the task every time), so the read side is made mechanical the same way:
 
-- **The `CLAUDE.md` pointer** (auto-loaded into every session) tells agents the *why* lives in
+- **The `AGENTS.md` pointer** (auto-loaded into every session) tells agents the *why* lives in
   `.ai/why/`, that it's the ground truth over commit messages, and to run `reasongraph context <file>`
   on unfamiliar code. This covers the "what changed / explain / review" moment.
 - **The edit-time `PreToolUse` hook** injects the matching entries right before an agent edits a

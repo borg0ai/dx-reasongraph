@@ -10,7 +10,7 @@ consolidated. If a claim here isn't backed by a number, treat it as opinion.
 - a **judge** graded subject answers **blind to which condition produced them**.
 
 **Conditions.** **B** = honest baseline (the repo as-is: code + commit messages, no `.ai/`).
-**C** = reasongraph (committed why-pack + `CLAUDE.md` pointer + edit-time injection).
+**C** = reasongraph (committed why-pack + `AGENTS.md` pointer + edit-time injection).
 
 **Repos.** `reasongraph` itself (a friendly ceiling) and **proof-of-life** ("POL"), a real,
 messy side project used as the unfriendly case. Bars were registered before any run. Every

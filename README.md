@@ -46,7 +46,7 @@ A few things worth knowing:
 
 - It works from the transcript after the fact. It never asks the agent to "log its decisions" mid-task (we tried that first, agents just don't do it).
 - Each branch gets one file: `.ai/why/<branch>.md`.
-- Future agents actually see this stuff. A note in `CLAUDE.md` points them at the why files, and a hook injects the relevant entries right before an agent edits a file that has history. (This repo's own pointer lives in `AGENTS.md`, so it loads for Codex, OpenCode, and Cursor as well as Claude Code.)
+- Future agents see this. A note in `AGENTS.md` points them at the why files, and a hook injects relevant entries before an agent edits a file with history.
 - It never blocks a push, never touches your staging area, and never pushes anything itself. It plays fine with multiple agents and worktrees.
 
 **How a future agent meets the why** — two automatic triggers, both reading from the committed why-pack, so the agent never has to remember to go look:
@@ -55,10 +55,10 @@ A few things worth knowing:
 flowchart TD
     why[("the why-pack<br/>(.ai/why/, committed)")]
 
-    claude["CLAUDE.md / AGENTS.md pointer<br/>auto-loaded every session"]
+    agents["AGENTS.md pointer<br/>auto-loaded every session"]
     hook["PreToolUse hook<br/>fires right before an edit"]
 
-    claude -->|"why / explain / review"| read["agent reads<br/>the why-pack"]
+    agents -->|"why / explain / review"| read["agent reads<br/>the why-pack"]
     hook -->|"edited file matches a Touches: glob"| inject["matching entries injected<br/>into the agent's context"]
 
     why -.-> read
@@ -74,7 +74,7 @@ No server, no accounts, no bot. It's a CLI, some hooks, and markdown files in gi
 
 Your transcript never leaves your machine. The only thing that gets shared is the markdown summary, and the summarizer follows strict rules: it never quotes your messages, never describes your confusion or back-and-forth, never includes business or money details, and strips secrets. Two deterministic checks sit behind the prompt (a secret/finance scanner and a rule that every entry must point at real code), then you review the file before you push. If you edit or delete an entry, ReasonGraph respects that forever.
 
-**Don't want anything committed at all?** `reasongraph init --self-only` runs in personal mode: the why-packs stay on your machine as private notes for you and your own agents — ignored through your repo's local `.git/info/exclude` (not the shared `.gitignore`), pointed at by a `CLAUDE.local.md` instead of the committed `CLAUDE.md`, and forced to `sync: "manual"` so no code path can commit. Handy for trying ReasonGraph on an existing repo, or one that isn't yours to write to (a client's, an employer's).
+**Don't want anything committed at all?** `reasongraph init --self-only` runs in personal mode: why-packs stay on your machine as private notes — ignored through the repo's local `.git/info/exclude`, with no shared `AGENTS.md` changes, and forced to `sync: "manual"` so no code path can commit.
 
 More detail in [docs/PRIVACY.md](docs/PRIVACY.md).
 

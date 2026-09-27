@@ -15,12 +15,6 @@ export const EXCLUDE_FENCE: Fence = {
   end: "# <<< reasongraph self-only <<<",
 };
 
-/** Fence for `CLAUDE.local.md` (markdown/HTML comments). */
-export const CLAUDE_LOCAL_FENCE: Fence = {
-  begin: "<!-- reasongraph:self-only:begin -->",
-  end: "<!-- reasongraph:self-only:end -->",
-};
-
 /** Absolute path to this repo's private, per-machine exclude file. */
 export function infoExcludePath(repoRoot: string): string | null {
   const r = spawnSync("git", ["rev-parse", "--git-path", "info/exclude"], {

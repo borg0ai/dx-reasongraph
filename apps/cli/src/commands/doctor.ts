@@ -40,18 +40,17 @@ export function doctor(): number {
 
   // Plugin hooks are managed by the native agent plugin manager.
 
-  // Read-side pointer. Self-only uses the personal CLAUDE.local.md; teams use
-  // the committed CLAUDE.md.
-  const pointerFile = rt.cfg.selfOnly ? "CLAUDE.local.md" : "CLAUDE.md";
-  const pointerMarker = rt.cfg.selfOnly ? "reasongraph:self-only" : "reasongraph:begin";
-  try {
-    if (fs.readFileSync(path.join(rt.repoRoot, pointerFile), "utf8").includes(pointerMarker)) {
-      line(OK, `${pointerFile} points agents at .ai/why/`);
-    } else {
-      line(MEH, `${pointerFile} has no ReasonGraph pointer — re-run init so agents know to read .ai/why/`);
+  // Self-only writes no shared agent instructions; shared setup uses AGENTS.md.
+  if (!rt.cfg.selfOnly) {
+    try {
+      if (fs.readFileSync(path.join(rt.repoRoot, "AGENTS.md"), "utf8").includes("reasongraph:begin")) {
+        line(OK, "AGENTS.md points agents at .ai/why/");
+      } else {
+        line(MEH, "AGENTS.md has no ReasonGraph pointer — re-run init so agents know to read .ai/why/");
+      }
+    } catch {
+      line(MEH, "no AGENTS.md — agents won't be told to read .ai/why/; re-run init");
     }
-  } catch {
-    line(MEH, `no ${pointerFile} — agents won't be told to read .ai/why/; re-run init`);
   }
 
   // git pre-push hook.

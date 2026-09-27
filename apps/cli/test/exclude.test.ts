@@ -19,12 +19,12 @@ function occurrences(hay: string, needle: string): number {
 
 test("ensureBlock creates the file with a fenced block when absent", () => {
   const f = tmpFile();
-  ensureBlock(f, EXCLUDE_FENCE, [".ai/", "CLAUDE.local.md"]);
+  ensureBlock(f, EXCLUDE_FENCE, [".ai/"]);
   const out = fs.readFileSync(f, "utf8");
   assert.ok(out.includes(EXCLUDE_FENCE.begin));
   assert.ok(out.includes(EXCLUDE_FENCE.end));
   assert.ok(out.includes(".ai/"));
-  assert.ok(out.includes("CLAUDE.local.md"));
+  assert.ok(out.includes(".ai/"));
 });
 
 test("ensureBlock is idempotent — one block after repeated calls", () => {

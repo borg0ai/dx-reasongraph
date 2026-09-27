@@ -3,12 +3,7 @@ import * as path from "node:path";
 import { resolveRuntime } from "../util/runtime.js";
 import { hooksDir } from "../util/git.js";
 import { writeFileAtomic } from "../util/fsx.js";
-import {
-  removeBlock,
-  infoExcludePath,
-  EXCLUDE_FENCE,
-  CLAUDE_LOCAL_FENCE,
-} from "../util/exclude.js";
+import { removeBlock, infoExcludePath, EXCLUDE_FENCE } from "../util/exclude.js";
 import { say, warn } from "../util/log.js";
 
 const GREP_BEGIN = "# >>> reasongraph managed >>>";
@@ -26,8 +21,9 @@ export function uninstall(): number {
   }
 
   removePrePushBlock(rt.repoRoot);
-  removeClaudeMdBlock(rt.repoRoot);
-  removeSelfOnlyBlocks(rt.repoRoot);
+  removeAgentsMdBlock(rt.repoRoot);
+  const excl = infoExcludePath(rt.repoRoot);
+  if (excl) removeBlock(excl, EXCLUDE_FENCE);
 
   try {
     fs.rmSync(rt.paths.stateDir, { recursive: true, force: true });
@@ -40,21 +36,9 @@ export function uninstall(): number {
   return 0;
 }
 
-/**
- * Strip the self-only additions: our block in `.git/info/exclude` and the
- * personal pointer in CLAUDE.local.md. Harmless in non-self-only repos (the
- * blocks simply aren't there). Why-pack files are left on disk, as with the
- * shared uninstall.
- */
-function removeSelfOnlyBlocks(repoRoot: string): void {
-  const excl = infoExcludePath(repoRoot);
-  if (excl) removeBlock(excl, EXCLUDE_FENCE);
-  removeBlock(path.join(repoRoot, "CLAUDE.local.md"), CLAUDE_LOCAL_FENCE);
-}
-
-/** Strip the reasongraph pointer block from CLAUDE.md; remove the file if empty. */
-function removeClaudeMdBlock(repoRoot: string): void {
-  const file = path.join(repoRoot, "CLAUDE.md");
+/** Strip the ReasonGraph pointer block from AGENTS.md; remove file if empty. */
+function removeAgentsMdBlock(repoRoot: string): void {
+  const file = path.join(repoRoot, "AGENTS.md");
   let contents: string;
   try {
     contents = fs.readFileSync(file, "utf8");
