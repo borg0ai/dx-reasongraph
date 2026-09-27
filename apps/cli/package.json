@@ -1,6 +1,6 @@
 {
   "name": "@borg0ai/reasongraph",
-  "version": "1.1.0",
+  "version": "0.0.1",
   "description": "Repository decision history CLI for coding agents.",
   "type": "module",
   "author": "Borg0 AI",
@@ -10,17 +10,35 @@
     "directory": "apps/cli"
   },
   "homepage": "https://github.com/borg0ai/dx-reasongraph/tree/main/apps/cli",
-  "bugs": { "url": "https://github.com/borg0ai/dx-reasongraph/issues" },
-  "bin": { "reasongraph": "./dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20.19" },
-  "publishConfig": { "access": "public" },
+  "bugs": {
+    "url": "https://github.com/borg0ai/dx-reasongraph/issues"
+  },
+  "bin": {
+    "reasongraph": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "keywords": ["ai", "agent", "reasoning", "decision-history", "git-hooks"],
+  "keywords": [
+    "ai",
+    "agent",
+    "reasoning",
+    "decision-history",
+    "git-hooks"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",

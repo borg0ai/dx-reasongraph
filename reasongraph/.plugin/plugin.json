@@ -1,8 +1,10 @@
 {
   "name": "reasongraph",
-  "version": "1.1.0",
+  "version": "0.0.1",
   "description": "Repository decision history, context injection, and session distillation hooks.",
-  "author": { "name": "Borg0 AI" },
+  "author": {
+    "name": "Borg0 AI"
+  },
   "repository": "https://github.com/borg0ai/dx-reasongraph",
   "license": "MIT",
   "keywords": [
