@@ -92,7 +92,7 @@ export async function init(opts: InitOptions = {}): Promise<number> {
     say("  markdown is the only shared artifact. Review before pushing; edits are kept.");
   }
   say("");
-  say("Now just work. `claude`, let the agent commit, `git push`. That's it.");
+  say("Now just work. `agent`, let it commit, `git push`. That's it.");
 
   // 7. Offer to backfill from any prior local sessions for this repo.
   return offerBackfill(repoRoot);

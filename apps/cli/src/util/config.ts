@@ -64,7 +64,7 @@ export interface reasongraphConfig {
 
 export const DEFAULT_CONFIG: reasongraphConfig = {
   distiller: {
-    backend: "claude",
+    backend: "agent",
     models: {
       claude: "haiku",
       agent: "auto",

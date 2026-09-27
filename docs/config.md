@@ -5,7 +5,7 @@
 ```json
 {
   "distiller": {
-    "backend": "claude",
+    "backend": "agent",
     "models": { "claude": "haiku", "agent": "auto", "codex": "gpt-6-luna" },
     "concurrency": 3
   },
@@ -37,7 +37,7 @@ commit in personal mode.
 
 | key | what it does |
 |---|---|
-| `distiller.backend` | Which CLI distills. `"claude"` (default) runs `claude -p`. `"agent"` runs Cursor's `agent -p --mode ask` (read-only). `"codex"` runs `codex exec` in a read-only sandbox. Each CLI uses its own login. |
+| `distiller.backend` | Which CLI distills. `"agent"` (default) runs Cursor's `agent -p --mode ask` (read-only), model `models.agent`. `"claude"` runs `claude -p`. `"codex"` runs `codex exec` in a read-only sandbox. Each CLI uses its own login. |
 | `distiller.models` | Model id for each CLI. The running backend uses only its own key: `models.claude`, `models.agent`, or `models.codex`. Changing `backend` does not reuse another CLI's model. |
 | `distiller.concurrency` | How many transcript chunks distill at once (default `3`). Each call spawns a CLI, so 3 stays inside the pre-push budget. |
 | `chunkChars` | How much transcript goes to the model per call (default `100000`). Bigger means fewer calls, so less overhead, but a slower single call — which matters against `timeBudgetMs`. Rarely worth touching. |
@@ -49,7 +49,7 @@ commit in personal mode.
 A local override switches CLI without changing the committed default:
 
 ```json
-{ "distiller": { "backend": "agent", "models": { "agent": "auto" } } }
+{ "distiller": { "backend": "claude", "models": { "claude": "haiku" } } }
 ```
 
 `codex` is the same shape. Auth errors come from the CLI itself.

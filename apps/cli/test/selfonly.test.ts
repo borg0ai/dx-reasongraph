@@ -101,7 +101,9 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
   const dir = tempRepo();
   await inRepo(dir, () => init());
 
-  assert.ok(fs.existsSync(path.join(dir, ".reasongraph", "config.json")), "shared config written");
+  const shared = JSON.parse(read(dir, ".reasongraph/config.json"));
+  assert.equal(shared.distiller.backend, "agent", "init defaults the distiller CLI to agent");
+  assert.equal(shared.distiller.models.agent, "auto");
   assert.ok(read(dir, ".gitignore").includes(".reasongraph/state/"), "shared gitignore written");
   assert.ok(read(dir, "AGENTS.md").includes("reasongraph:begin"), "committed pointer written");
   assert.ok(!read(dir, ".git/info/exclude").includes("reasongraph self-only"), "no private exclude");

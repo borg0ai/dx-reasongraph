@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { agentArgs, codexArgs, modelForCli, selectBackend } from "../src/distiller/backends.js";
-import { DEFAULT_CONFIG, reasongraphConfig } from "../src/util/config.js";
+import { DEFAULT_CONFIG, defaultSharedConfig, reasongraphConfig } from "../src/util/config.js";
 
 function cfg(backend: reasongraphConfig["distiller"]["backend"], model: string): reasongraphConfig {
   return {
@@ -13,6 +13,13 @@ function cfg(backend: reasongraphConfig["distiller"]["backend"], model: string):
     },
   };
 }
+
+test("init's shared config defaults the distiller to agent", () => {
+  assert.equal(DEFAULT_CONFIG.distiller.backend, "agent");
+  const shared = defaultSharedConfig() as { distiller: { backend: string; models: { agent: string } } };
+  assert.equal(shared.distiller.backend, "agent");
+  assert.equal(shared.distiller.models.agent, "auto");
+});
 
 test("the active CLI uses only its own model", () => {
   const agent = cfg("agent", "composer-2.5");
