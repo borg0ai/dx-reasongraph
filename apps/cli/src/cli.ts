@@ -11,7 +11,9 @@ import { uninstall } from "./commands/uninstall.js";
 import { hookStop, hookSessionEnd, hookPrePush, hookPreToolUse } from "./commands/hook.js";
 import { install } from "./commands/install.js";
 
-const VERSION = "1.1.0";
+declare const __REASONGRAPH_VERSION__: string;
+
+const VERSION = __REASONGRAPH_VERSION__;
 
 function parseFlags(args: string[]): { flags: Record<string, string | boolean>; positional: string[] } {
   const flags: Record<string, string | boolean> = {};
