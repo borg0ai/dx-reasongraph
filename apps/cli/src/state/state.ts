@@ -138,6 +138,8 @@ export function upsertSession(
     state.sessions[sessionId] = rec;
     return rec;
   }
+  const toolChanged = patch.tool !== existing.tool;
+  existing.tool = patch.tool;
   existing.last_seen = patch.last_seen ?? now;
   existing.transcript_path = patch.transcript_path || existing.transcript_path;
   if (patch.branches_seen) existing.branches_seen = union(existing.branches_seen, patch.branches_seen);
@@ -147,6 +149,13 @@ export function upsertSession(
   if (patch.last_distilled_cursor !== undefined) existing.last_distilled_cursor = patch.last_distilled_cursor;
   if (patch.status) existing.status = patch.status;
   if (patch.distilled_to) existing.distilled_to = union(existing.distilled_to ?? [], patch.distilled_to);
+  // The previous cursor was produced by a different parser. Rewind so the
+  // next distill reads the transcript with the adapter that owns it.
+  if (toolChanged) {
+    existing.last_distilled_offset = 0;
+    existing.last_distilled_cursor = undefined;
+    existing.status = "dirty";
+  }
   return existing;
 }
 

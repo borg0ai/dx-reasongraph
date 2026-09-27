@@ -5,6 +5,7 @@ import { reasongraphConfig } from "../util/config.js";
 import { isoNow } from "../util/log.js";
 import { writeFileAtomic, ensureDir, acquireLock } from "../util/fsx.js";
 import { adapterFor } from "../adapters/index.js";
+import { correctSessionTool } from "./sessionTool.js";
 import {
   StateFile,
   SessionRecord,
@@ -17,6 +18,9 @@ import { distillEvents } from "../distiller/index.js";
 import { parsePack, mergePack } from "../distiller/whypack.js";
 import { renderPack } from "../distiller/whypack.js";
 import { currentBranch, branchExists } from "../util/git.js";
+
+/** Non-empty bytes that no parser turned into events. Not a finished distill. */
+export const NO_EVENTS_REASON = "no events from non-empty transcript";
 
 export interface DistillSessionResult {
   ok: boolean;
@@ -60,6 +64,9 @@ export async function distillSession(
   if (!record) {
     return { ...base, reason: "unknown session" };
   }
+  // Heal a record the hook labeled with the wrong tool before choosing a parser.
+  // The rewind is persisted so a later crash does not keep the old cursor.
+  if (correctSessionTool(record)) writeSession(paths, sessionId, record);
   const adapter = adapterFor(record.tool);
   if (!adapter) {
     return { ...base, reason: `no adapter for tool '${record.tool}'` };
@@ -125,6 +132,12 @@ export async function distillSession(
   const knownTitles = existing?.entries.map((e) => e.title) ?? [];
 
   const events = adapter.normalizeEvents(raw);
+  if (events.length === 0) {
+    // raw is non-empty here. Sealing the cursor would skip this transcript forever.
+    record.status = "dirty";
+    writeSession(paths, sessionId, record);
+    return { ...base, reason: NO_EVENTS_REASON };
+  }
   const outcome = await distillEvents(events, cfg, backend, { knownTitles, deadline: opts.deadline });
   if (!outcome.ok) {
     // Stay dirty; retried at next pre-push. Push is never blocked by this.

@@ -82,3 +82,51 @@ test("legacy state.json is migrated to per-session files and removed", () => {
   assert.ok(fs.existsSync(path.join(paths.sessionsDir, "one.json")), "per-session file written");
   fs.rmSync(repo, { recursive: true, force: true });
 });
+
+test("a tool change rewinds the distill cursor; the same tool does not", () => {
+  const state: StateFile = { version: 1, sessions: {} };
+  const now = "2026-09-27T00:00:00Z";
+  upsertSession(
+    state,
+    "id",
+    {
+      tool: "claude-code",
+      transcript_path: "/tmp/a.jsonl",
+      repo: "/repo",
+      last_distilled_offset: 40,
+      status: "distilled",
+    },
+    now,
+  );
+  upsertSession(
+    state,
+    "id",
+    {
+      tool: "claude-code",
+      transcript_path: "/tmp/a.jsonl",
+      repo: "/repo",
+      last_distilled_offset: 40,
+      status: "distilled",
+    },
+    now,
+  );
+  assert.equal(state.sessions.id.status, "distilled");
+  assert.equal(state.sessions.id.last_distilled_offset, 40);
+
+  upsertSession(
+    state,
+    "id",
+    {
+      tool: "codex",
+      transcript_path: "/tmp/a.jsonl",
+      repo: "/repo",
+      last_distilled_offset: 40,
+      status: "distilled",
+    },
+    now,
+  );
+  assert.equal(state.sessions.id.tool, "codex");
+  assert.equal(state.sessions.id.last_distilled_offset, 0);
+  assert.equal(state.sessions.id.status, "dirty");
+  assert.equal(state.sessions.id.last_distilled_cursor, undefined);
+});

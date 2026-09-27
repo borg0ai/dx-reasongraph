@@ -8,7 +8,7 @@ import {
   TranscriptMeta,
 } from "./types.js";
 import { claudeProjectDirFor, claudeProjectsDir } from "../util/paths.js";
-import { jsonlHasNew, jsonlUnread, readJsonlSpan } from "./jsonl.js";
+import { isUnderDir, JSONL_EXT, jsonlHasNew, jsonlUnread, readJsonlSpan } from "./jsonl.js";
 import { TOOL_CLAUDE_CODE } from "./names.js";
 import { SessionCursor } from "./types.js";
 
@@ -167,6 +167,10 @@ function summarizeToolResult(toolName: string, block: any, toolUseResult: any): 
 
 export class ClaudeCodeAdapter implements Adapter {
   readonly tool = TOOL_CLAUDE_CODE;
+
+  ownsTranscript(transcriptPath: string): boolean {
+    return transcriptPath.endsWith(JSONL_EXT) && isUnderDir(transcriptPath, claudeProjectsDir());
+  }
 
   discoverSessions(repoPath: string): DiscoveredSession[] {
     const dir = claudeProjectDirFor(repoPath);

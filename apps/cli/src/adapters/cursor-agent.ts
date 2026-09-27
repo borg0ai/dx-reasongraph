@@ -9,9 +9,10 @@ import {
   SessionCursor,
   TranscriptMeta,
 } from "./types.js";
-import { jsonlHasNew, jsonlUnread, readJsonlSpan } from "./jsonl.js";
+import { JSONL_EXT, jsonlHasNew, jsonlUnread, readJsonlSpan } from "./jsonl.js";
 import { TOOL_CURSOR_AGENT } from "./names.js";
 
+const TRANSCRIPTS_SEGMENT = "agent-transcripts";
 const EDITING_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 const ARG_LIMIT = 180;
 
@@ -55,6 +56,11 @@ export class CursorAgentAdapter implements Adapter {
   readonly tool = TOOL_CURSOR_AGENT;
 
   constructor(private readonly projectsRoot = path.join(os.homedir(), ".cursor", "projects")) {}
+
+  ownsTranscript(transcriptPath: string): boolean {
+    if (!transcriptPath.endsWith(JSONL_EXT)) return false;
+    return path.normalize(transcriptPath).split(path.sep).includes(TRANSCRIPTS_SEGMENT);
+  }
 
   discoverSessions(repoPath: string): DiscoveredSession[] {
     const dir = path.join(this.projectsRoot, cursorProjectSlug(repoPath), "agent-transcripts");

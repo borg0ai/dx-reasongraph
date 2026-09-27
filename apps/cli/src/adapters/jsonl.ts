@@ -62,7 +62,18 @@ export function walkJsonl(dir: string): string[] {
   return out;
 }
 
+export const JSONL_EXT = ".jsonl";
+
 export function samePath(a: string, b: string): boolean {
   const norm = (p: string) => path.resolve(p).replace(/[\\/]+$/, "");
   return norm(a) === norm(b);
+}
+
+/** True when `file` is `dir` or a descendant. A sibling with a shared prefix does not match. */
+export function isUnderDir(file: string, dir: string): boolean {
+  const root = path.resolve(dir);
+  const target = path.resolve(file);
+  if (target === root) return true;
+  const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+  return target.startsWith(prefix);
 }

@@ -12,6 +12,8 @@ import {
 import { samePath } from "./jsonl.js";
 import { TOOL_OPENCODE } from "./names.js";
 
+const DB_FILENAME = "opencode.db";
+
 /** Unread row count stands in for bytes so the Stop-hook threshold still trips. */
 const ROW_ACTIVITY_BYTES = 1_000_000;
 const ARG_LIMIT = 180;
@@ -141,8 +143,12 @@ export class OpenCodeAdapter implements Adapter {
   readonly tool = TOOL_OPENCODE;
 
   constructor(
-    private readonly dbPath = path.join(os.homedir(), ".local", "share", "opencode", "opencode.db"),
+    private readonly dbPath = path.join(os.homedir(), ".local", "share", "opencode", DB_FILENAME),
   ) {}
+
+  ownsTranscript(transcriptPath: string): boolean {
+    return path.basename(transcriptPath) === DB_FILENAME;
+  }
 
   discoverSessions(repoPath: string): DiscoveredSession[] {
     const db = openDb(this.dbPath);

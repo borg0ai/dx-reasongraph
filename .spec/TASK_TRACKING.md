@@ -11,3 +11,5 @@
   - [x] Implement RFC 0003: Install root ReasonGraph plugin and close skill CLI loop (child of 0001) (RFC 0003)
 - [x] Implement RFC 0004: Move why-packs into .reasongraph/why (RFC 0004)
 - [x] Implement RFC 0007: Distill Codex, OpenCode, and cursor-agent sessions (RFC 0007)
+- [x] Implement RFC 0008: Attribute each transcript to the adapter that owns it (RFC 0008)
+

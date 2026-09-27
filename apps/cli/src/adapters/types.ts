@@ -58,6 +58,12 @@ export interface SessionCursor {
 export interface Adapter {
   readonly tool: string;
 
+  /**
+   * True when this adapter is the one that can parse `transcriptPath`.
+   * Checks are disjoint: a path belongs to at most one tool.
+   */
+  ownsTranscript(transcriptPath: string): boolean;
+
   /** Find sessions whose transcripts belong to `repoPath`. */
   discoverSessions(repoPath: string): DiscoveredSession[];
 

@@ -4,6 +4,7 @@ import { listWorktrees } from "../util/git.js";
 import { ADAPTERS, adapterFor } from "../adapters/index.js";
 import { SessionCursor } from "../adapters/types.js";
 import { StateFile, SessionRecord, upsertSession, writeSession } from "../state/state.js";
+import { correctSessionTool } from "./sessionTool.js";
 
 /**
  * Reconcile state with the transcripts on disk across EVERY worktree of the
@@ -35,7 +36,9 @@ export function discoverAndSync(repoRoot: string, state: StateFile): number {
           added++;
         } else {
           // Keep transcript path fresh in case the encoding/home moved.
-          state.sessions[found.sessionId].transcript_path = found.transcriptPath;
+          const rec = state.sessions[found.sessionId];
+          rec.transcript_path = found.transcriptPath;
+          if (correctSessionTool(rec)) writeSession(paths, found.sessionId, rec);
         }
       }
     }

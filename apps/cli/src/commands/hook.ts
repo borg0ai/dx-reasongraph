@@ -9,7 +9,7 @@ import { selfCliPath } from "../util/self.js";
 import { isoNow, warn, say, appendLog } from "../util/log.js";
 import { readState, upsertSession, writeSession, readSession } from "../state/state.js";
 import { collectContext } from "./context.js";
-import { adapterFor } from "../adapters/index.js";
+import { adapterFor, toolForTranscript } from "../adapters/index.js";
 import { selectBackend } from "../distiller/backends.js";
 import { distillSession } from "../core/distillSession.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
@@ -127,6 +127,9 @@ export function hookStop(): number {
   const ctx = hookContext(cwd);
   if (!ctx || !input.session_id || !input.transcript_path) return 0;
 
+  const tool = toolForTranscript(input.transcript_path);
+  if (!tool) return 0;
+
   const { state } = readState(ctx.paths);
   const now = isoNow();
   // Capture the checked-out branch now, while the repo is known to be on it. A
@@ -138,7 +141,7 @@ export function hookStop(): number {
     state,
     input.session_id,
     {
-      tool: "claude-code",
+      tool,
       transcript_path: input.transcript_path,
       repo: ctx.repoRoot,
       status: "dirty",
@@ -193,24 +196,29 @@ export function hookSessionEnd(): number {
   // Make sure the session is recorded even if Stop never fired.
   const { state } = readState(ctx.paths);
   if (input.transcript_path) {
-    const rec = upsertSession(
-      state,
-      input.session_id,
-      {
-        tool: "claude-code",
-        transcript_path: input.transcript_path,
-        repo: ctx.repoRoot,
-        status: "dirty",
-        // Same rationale as Stop: pin the branch while the repo is still on it,
-        // so a no-commit session is attributed correctly at background distill.
-        last_branch: currentBranch(ctx.repoRoot) ?? undefined,
-      },
-      isoNow(),
-    );
-    try {
-      writeSession(ctx.paths, input.session_id, rec);
-    } catch {
-      /* ignore */
+    const tool = toolForTranscript(input.transcript_path);
+    // An unrecognized path is not stored as Claude Code. Distill below no-ops
+    // when the session was never recorded.
+    if (tool) {
+      const rec = upsertSession(
+        state,
+        input.session_id,
+        {
+          tool,
+          transcript_path: input.transcript_path,
+          repo: ctx.repoRoot,
+          status: "dirty",
+          // Same rationale as Stop: pin the branch while the repo is still on it,
+          // so a no-commit session is attributed correctly at background distill.
+          last_branch: currentBranch(ctx.repoRoot) ?? undefined,
+        },
+        isoNow(),
+      );
+      try {
+        writeSession(ctx.paths, input.session_id, rec);
+      } catch {
+        /* ignore */
+      }
     }
   }
 

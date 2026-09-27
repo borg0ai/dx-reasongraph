@@ -8,7 +8,7 @@ import {
   SessionCursor,
   TranscriptMeta,
 } from "./types.js";
-import { jsonlHasNew, jsonlUnread, readHead, readJsonlSpan, samePath, walkJsonl } from "./jsonl.js";
+import { isUnderDir, JSONL_EXT, jsonlHasNew, jsonlUnread, readHead, readJsonlSpan, samePath, walkJsonl } from "./jsonl.js";
 import { TOOL_CODEX } from "./names.js";
 
 const ARG_LIMIT = 180;
@@ -86,6 +86,10 @@ export class CodexAdapter implements Adapter {
   readonly tool = TOOL_CODEX;
 
   constructor(private readonly sessionsRoot = path.join(os.homedir(), ".codex", "sessions")) {}
+
+  ownsTranscript(transcriptPath: string): boolean {
+    return transcriptPath.endsWith(JSONL_EXT) && isUnderDir(transcriptPath, this.sessionsRoot);
+  }
 
   discoverSessions(repoPath: string): DiscoveredSession[] {
     const out: DiscoveredSession[] = [];
