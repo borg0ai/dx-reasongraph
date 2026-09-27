@@ -53,12 +53,10 @@ Considered/rejected: Sealing `ok: true` plus an empty pack was rejected because 
 Reviewer attention: Confirm the guard is the non-empty byte check in `distillSession`, and that a zero-event result does not move the offset or set `distilled`.
 
 ### Specify the attribution fix as RFC 0008 and mark it implemented
-Status: directed
-Touches: `.spec/rfc/completed/0008-transcript-tool-attribution.md`, `.spec/ROADMAP.md`, `.spec/TASK_TRACKING.md`
+Status: discussed
+Touches: `.spec/rfc/completed/0008-transcript-tool-attribution.md`, `.spec/TASK_TRACKING.md`, `apps/cli/src/core/sessionTool.ts`
 
-The fix is recorded as RFC 0008, "Attribute each transcript to the adapter that owns it," covering `ownsTranscript`, path-based tool selection, hook storage, rewind of a mismatched tool, and refusing to seal a non-empty zero-event read. The document validated clean, then was advanced to Implemented at `.spec/rfc/completed/0008-transcript-tool-attribution.md`, with roadmap and task tracking pointed at it.
-
-Reviewer attention: Confirm the completed RFC still matches the hook, sweep, and distillSession behavior, including the rewind to offset 0.
+RFC 0008 is the transcript-ownership fix and is marked implemented, not left as an open design. The workspace copy was committed as 9d67e02 with message fix(cli): attribute transcripts to the owning adapter, covering 17 files (the RFC, adapter ownership, hook selection, offset rewind, and tests).
 
 ### Lock path ownership and rewind behavior in CLI tests
 Status: directed
@@ -69,10 +67,48 @@ Path ownership and the session rewind are covered by new tests in `transcriptToo
 Reviewer attention: Confirm the new tests cover an unknown path, each owned layout, a tool mismatch that rewinds offset to 0, and a non-empty zero-event read that stays dirty.
 
 ### Skip a failed distiller chunk without logging the backend error
-Status: discussed — pre-existing catch; surfaced while tracing chunk failures, left as-is
-Touches: `apps/cli/src/distiller/index.ts`, `apps/cli/src/distiller/backends.ts`, `.reasongraph/config.json`
+Status: discussed
+Touches: `apps/cli/src/distiller/index.ts`, `.reasongraph/state/logs/distill.log`
 
-Config sets `distiller.backend` to `claude` and the model to `haiku`, and each chunk spawns `claude -p`. `distillEvents` catches a chunk error, drops the message, and only increments `chunkFailures`, so the CLI reports that every chunk failed. All eight sessions failed that way (chunk counts 1, 9, 26, 9, 3, 1, 1, and 1). They stay `dirty` and the offset does not advance. A direct `claude -p --model haiku` exited 1 because a session limit was in effect, which is what every spawn hit. The in-code comment keeps the catch so one failed chunk does not drop decisions from the rest of the session.
+A failed model chunk is counted and skipped without recording the child process stderr or exit code. When every chunk fails, the command prints only that all chunks failed. A direct claude -p --model haiku run exited 1 because the Claude session limit was already hit, but that reason never appeared in the distill summary, so the run looked like the earlier empty-transcript attribution bug. The session stayed dirty with the offset left at 0 so a later distill retries from the start. The PATH reasongraph binary at 0.1.3 still did this, because that build only invokes claude -p and does not read distiller.backend.
 
-Risk: The only operator-visible signal is the chunk-failure count, so a backend refusal looks like a generic distill failure.
-Reviewer attention: Confirm whether the empty catch should keep hiding the backend exit text; sessions remain retryable because the offset does not move.
+### Select the distiller backend by CLI name
+Status: directed
+Touches: `apps/cli/src/util/config.ts`, `apps/cli/src/distiller/backends.ts`, `apps/cli/src/distiller/index.ts`, `docs/config.md`, `.reasongraph/config.json`
+
+distiller.backend chooses which local binary runs a chunk. The allowed values are the CLI names claude, agent, and codex. The Cursor backend id is agent, matching the agent binary, rather than cursor or cursor-agent. This landed on main as b9a62e8, feat(cli): distill with claude, agent, or codex.
+
+Considered/rejected: A Claude-only claude -p backend, and a backend id of cursor that invoked cursor-agent. Claude-only distillation exited 1 on every chunk once the Claude session limit was hit, with no separate quota for the other CLIs.
+Risk: The reasongraph binary on PATH was still 0.1.3. That build ignores distiller.backend and distiller.models and always runs claude -p, so a distill from that shim still fails every chunk while the session limit holds.
+Reviewer attention: Confirm installed and published CLIs are this build, not 0.1.3, before expecting backend to switch the process. Confirm the config union is only claude, agent, and codex.
+
+### Drop API providers and API-key checks
+Status: directed
+Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/src/commands/doctor.ts`, `apps/cli/src/util/config.ts`, `docs/config.md`
+
+The distiller does not call an API provider and does not read API keys. Login and quota failures are left to the selected CLI. doctor follows that same rule and does not inspect a key.
+
+Considered/rejected: An API fallback when ANTHROPIC_API_KEY was set, and in-process key checks in doctor. A Vite production bundle had also compiled a direct process.env read into an empty object, so key inspection inside the bundled doctor was unreliable; that path was removed instead of kept behind an indirect env read.
+
+### Pass only the model bound to the selected CLI
+Status: directed
+Touches: `apps/cli/src/util/config.ts`, `apps/cli/src/distiller/backends.ts`, `apps/cli/src/commands/doctor.ts`, `docs/config.md`, `.reasongraph/config.json`, `.reasongraph/state/config.json`
+
+distiller.models is a map with one string per CLI (claude, agent, codex). The running backend receives only its own entry, unchanged, on that CLI's model flag. The configured values were claude haiku, agent auto, and codex gpt-6-luna. auto is the agent CLI's default model name; gpt-6-luna was taken from the local Codex config. doctor reports the selected CLI's model.
+
+Considered/rejected: One shared model string (haiku) passed through no matter which CLI was selected.
+Reviewer attention: Confirm gpt-6-luna is an acceptable shared default and not only a machine-local Codex setting.
+
+### Invoke each distiller CLI with its native headless flags
+Status: discussed — binary names were specified; ask mode and the read-only sandbox were chosen while wiring them
+Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/test/backends.test.ts`
+
+claude is invoked as claude -p --model. agent is invoked as agent -p --mode ask --model so the distill stays read-only. codex is invoked as codex exec -m inside a read-only sandbox. apps/cli/test/backends.test.ts locks those argv shapes. The full suite later reported 104 passed tests.
+
+### Set local distiller configs to the agent CLI
+Status: directed
+Touches: `.reasongraph/config.json`, `.reasongraph/state/config.json`, `/Volumes/ORICO/ws/prj/skills/archify/.reasongraph/state/config.json`, `.reasongraph/why/main.md`
+
+This repo's shared config and state config, and the archify checkout's state config, were set to backend agent and models.agent auto so distillation would stop calling claude. Dogfood through the repo-built CLI (node apps/cli/dist/cli.js), not the 0.1.3 shim, distilled session 15d26749-73f7-4be8-83de-2410b7217c03 (about 66KB) and added 8 decisions to .reasongraph/why/main.md. That why-pack update was pushed as 1fcc9ae, separate from the CLI commit b9a62e8.
+
+Reviewer attention: Confirm the why-pack commit 1fcc9ae is intended on main, and that the archify state config change belongs outside this repo's commit.
