@@ -78,10 +78,12 @@ export async function distillSession(
   try {
   let raw: string;
   let newOffset: number;
+  let nextCursor: string | undefined;
   try {
-    const read = adapter.readTranscript(record.transcript_path, record.last_distilled_offset);
+    const read = adapter.readNew({ ...record, session_id: sessionId });
     raw = read.raw;
     newOffset = read.newOffset;
+    nextCursor = read.cursor;
   } catch (e: any) {
     return { ...base, reason: `read failed: ${e.message}` };
   }
@@ -106,6 +108,7 @@ export async function distillSession(
   if (!raw.trim()) {
     // Nothing new to distill; mark clean and move on.
     record.last_distilled_offset = newOffset;
+    if (nextCursor !== undefined) record.last_distilled_cursor = nextCursor;
     record.status = "distilled";
     writeSession(paths, sessionId, record);
     return { ...base, ok: true, changed: false, reason: "no new content" };
@@ -154,6 +157,7 @@ export async function distillSession(
     record.status = "dirty";
   } else {
     record.last_distilled_offset = newOffset;
+    if (nextCursor !== undefined) record.last_distilled_cursor = nextCursor;
     record.status = "distilled";
   }
   record.distilled_to = [...new Set([...(record.distilled_to ?? []), branch])];

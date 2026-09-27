@@ -1,6 +1,6 @@
 # RFC 0007: Distill Codex, OpenCode, and cursor-agent sessions
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Summary
 
@@ -8,7 +8,7 @@ Finish write-side support for Codex, OpenCode, and cursor-agent. Each gets an ad
 
 ## Problem
 
-`ADAPTERS` contains only `ClaudeCodeAdapter`. `CodexAdapter` returns empty arrays and is listed in `STUBBED_ADAPTERS`, so sweeps never see Codex sessions under `~/.codex/sessions/`. OpenCode sessions live in `~/.local/share/opencode/opencode.db` (`session`, `message`, `part`, `project`, `project_directory`) and have no adapter. cursor-agent writes JSONL under `~/.cursor/projects/<project>/agent-transcripts/` and a per-chat SQLite store under `~/.cursor/chats/`; neither is read.
+`ADAPTERS` contains only `ClaudeCodeAdapter`. `CodexAdapter` returns empty arrays and is listed in `STUBBED_ADAPTERS`, so sweeps never see Codex sessions under `~/.codex/sessions/`. OpenCode sessions live in `~/.local/share/opencode/opencode.db` (`session_v2`, `session_message`) and have no adapter. cursor-agent writes JSONL under `~/.cursor/projects/<project>/agent-transcripts/` and a per-chat SQLite store under `~/.cursor/chats/`; neither is read.
 
 `sweep.ts`, `status.ts`, and `hook.ts` treat `fileSize(transcript_path) > last_distilled_offset` as "new activity". That is true for an append-only JSONL file. It is false for OpenCode's single database: WAL buffering can leave the main file size unchanged while new rows exist, and one file holds every session.
 
@@ -36,7 +36,7 @@ The read side is already agent-neutral. `reasongraph context` and the why-pack d
 
 Add `hasNewActivity(record): boolean` and `readNew(record): ReadResult` to `Adapter`. JSONL adapters implement them with the current byte offset. Call sites in `apps/cli/src/core/sweep.ts`, `apps/cli/src/commands/status.ts`, and `apps/cli/src/commands/hook.ts` stop calling `fileSize` themselves.
 
-OpenCode stores its cursor in a new string field `last_distilled_cursor` on the session record. Absence means "never distilled". The field is the last `message` id included. `last_distilled_offset` remains the JSONL byte offset so existing Claude records do not migrate.
+OpenCode stores its cursor in a new string field `last_distilled_cursor` on the session record. Absence means "never distilled". The field is the last `session_message` id included. `last_distilled_offset` remains the JSONL byte offset so existing Claude records do not migrate.
 
 ### Codex
 
@@ -48,9 +48,9 @@ Read `~/.cursor/projects/<project>/agent-transcripts/<id>/<id>.jsonl`. The proje
 
 ### OpenCode
 
-Open `~/.local/share/opencode/opencode.db` read-only. Select sessions whose project directory is the repo. Read `message` and `part` rows for that session with id greater than `last_distilled_cursor`. Map parts into the normalized event kinds. Do not use the database file size as a cursor.
+Open `~/.local/share/opencode/opencode.db` read-only. The live schema stores sessions in `session_v2` (`directory` is the repo) and transcript rows in `session_message` (`type` plus a JSON `data` column). There is no `part` table. A legacy `session` table, when present, is not read. Select sessions whose directory is the repo. Read `session_message` rows after `last_distilled_cursor`, ordered by `time_created`, `seq`, `id`. Map `user` text, assistant `reasoning`, assistant `text`, and assistant `tool` calls (name and input only) into the normalized event kinds. Skip `synthetic` and `idle` rows. Do not use the database file size as a cursor. A database that cannot be queried returns no sessions instead of failing the sweep.
 
-Pin the SQL to a fixture copied from a real `opencode.db`, not to an assumed schema. If `session` and `session_v2` disagree, the fixture test names which table the adapter reads.
+Pin the SQL to a fixture shaped like a real `opencode.db`. The fixture test names `session_v2` as the table that is read.
 
 ## Acceptance
 

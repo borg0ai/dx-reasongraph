@@ -9,7 +9,7 @@ import { selfCliPath } from "../util/self.js";
 import { isoNow, warn, say, appendLog } from "../util/log.js";
 import { readState, upsertSession, writeSession, readSession } from "../state/state.js";
 import { collectContext } from "./context.js";
-import { fileSize } from "../util/fsx.js";
+import { adapterFor } from "../adapters/index.js";
 import { selectBackend } from "../distiller/backends.js";
 import { distillSession } from "../core/distillSession.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
@@ -156,7 +156,9 @@ export function hookStop(): number {
   try {
     const cfg = loadConfig(ctx.repoRoot);
     if (cfg.autoDistill.enabled) {
-      const grew = fileSize(input.transcript_path) - rec.last_distilled_offset >= cfg.autoDistill.minGrowthBytes;
+      const adapter = adapterFor(rec.tool);
+      const unread = adapter?.unreadBytes({ ...rec, session_id: input.session_id }) ?? 0;
+      const grew = unread >= cfg.autoDistill.minGrowthBytes;
       const lastAuto = rec.last_auto_distill_at ? Date.parse(rec.last_auto_distill_at) : 0;
       const due = Date.now() - lastAuto >= cfg.autoDistill.minIntervalMs;
       if (grew && due) {

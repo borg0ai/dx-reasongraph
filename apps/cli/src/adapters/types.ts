@@ -40,8 +40,19 @@ export interface TranscriptMeta {
 export interface ReadResult {
   /** Newly-read bytes as text (from `fromOffset` to EOF). */
   raw: string;
-  /** New byte offset (== file size at read time). */
+  /** New byte offset (== file size at read time). JSONL adapters use this. */
   newOffset: number;
+  /** Opaque per-session cursor. OpenCode stores the last message id here. */
+  cursor?: string;
+}
+
+/** Fields an adapter needs to decide whether a session has undistilled input. */
+export interface SessionCursor {
+  transcript_path: string;
+  last_distilled_offset: number;
+  last_distilled_cursor?: string;
+  /** State-map key. OpenCode needs it because every session shares one database file. */
+  session_id?: string;
 }
 
 export interface Adapter {
@@ -58,4 +69,13 @@ export interface Adapter {
 
   /** Cheap metadata pass for state + branch matching. */
   extractMeta(raw: string): TranscriptMeta;
+
+  /** True when this session has input past the stored cursor. Not file size. */
+  hasNewActivity(record: SessionCursor): boolean;
+
+  /** Bytes still unread. Non-file adapters return a large value when rows are new. */
+  unreadBytes(record: SessionCursor): number;
+
+  /** Read only the undistilled span and report the cursor to store. */
+  readNew(record: SessionCursor): ReadResult;
 }

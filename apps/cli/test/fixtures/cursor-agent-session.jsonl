@@ -1,0 +1,2 @@
+{"role":"user","message":{"content":[{"type":"text","text":"Record why guest tokens expire quickly."}]}}
+{"role":"assistant","message":{"content":[{"type":"thinking","text":"The leak window is the expiry."},{"type":"text","text":"Guest JWT expiry stays at 15 minutes."},{"type":"tool_use","name":"Edit","input":{"file_path":"lib/auth/tokens.ts"}}]}}

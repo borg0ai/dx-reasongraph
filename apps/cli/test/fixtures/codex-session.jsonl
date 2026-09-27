@@ -1,0 +1,6 @@
+{"timestamp":"2026-09-01T00:00:00.000Z","type":"session_meta","payload":{"id":"codex-fixture","cwd":"/repo","git":{"branch":"guest-access"}}}
+{"timestamp":"2026-09-01T00:00:01.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Keep guest tokens short."}]}}
+{"timestamp":"2026-09-01T00:00:02.000Z","type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"A short expiry limits how long a forwarded link stays valid."}]}}
+{"timestamp":"2026-09-01T00:00:03.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Set the guest JWT expiry to 15 minutes."}]}}
+{"timestamp":"2026-09-01T00:00:04.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"command\":\"echo hi\",\"path\":\"lib/auth/tokens.ts\"}"}}
+{"timestamp":"2026-09-01T00:00:05.000Z","type":"event_msg","payload":{"type":"agent_message","message":"This duplicate agent line must not become its own event."}}

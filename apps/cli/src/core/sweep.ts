@@ -1,9 +1,9 @@
 import { reasongraphPaths } from "../util/paths.js";
-import { fileSize } from "../util/fsx.js";
 import { isoNow } from "../util/log.js";
 import { listWorktrees } from "../util/git.js";
-import { ADAPTERS } from "../adapters/index.js";
-import { StateFile, upsertSession, writeSession } from "../state/state.js";
+import { ADAPTERS, adapterFor } from "../adapters/index.js";
+import { SessionCursor } from "../adapters/types.js";
+import { StateFile, SessionRecord, upsertSession, writeSession } from "../state/state.js";
 
 /**
  * Reconcile state with the transcripts on disk across EVERY worktree of the
@@ -53,9 +53,17 @@ export function sessionsNeedingDistill(repoRoot: string, state: StateFile): stri
   const ids: string[] = [];
   for (const [id, rec] of Object.entries(state.sessions)) {
     if (!family.has(rec.repo)) continue;
-    const grew = fileSize(rec.transcript_path) > rec.last_distilled_offset;
+    const grew = sessionHasNewActivity(id, rec);
     if (rec.status === "dirty" || grew) ids.push(id);
   }
   return ids;
+}
+
+/** Freshness is the adapter's job. JSONL uses a byte offset; OpenCode uses a message id. */
+export function sessionHasNewActivity(sessionId: string, rec: SessionRecord): boolean {
+  const adapter = adapterFor(rec.tool);
+  if (!adapter) return false;
+  const cursor: SessionCursor = { ...rec, session_id: sessionId };
+  return adapter.hasNewActivity(cursor);
 }
 

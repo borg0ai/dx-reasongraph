@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
 import { resolveRuntime, isInitialized } from "../util/runtime.js";
 import { readState } from "../state/state.js";
-import { discoverAndSync } from "../core/sweep.js";
-import { fileSize } from "../util/fsx.js";
+import { discoverAndSync, sessionHasNewActivity } from "../core/sweep.js";
 import { whyPackPath, slugifyBranch } from "../util/paths.js";
 import { currentBranch, trackedFilesUnder } from "../util/git.js";
 import { whyPackGitStatus } from "../core/autocommit.js";
@@ -37,7 +36,7 @@ export function status(): number {
     say(`Sessions (${sessions.length}):`);
     const unmatched: string[] = [];
     for (const [id, r] of sessions) {
-      const grew = fileSize(r.transcript_path) > r.last_distilled_offset;
+      const grew = sessionHasNewActivity(id, r);
       const stateLabel = r.status === "dirty" || grew ? "DIRTY" : "distilled";
       const to = r.distilled_to?.length ? ` -> ${r.distilled_to.join(", ")}` : "";
       const seen = r.branches_seen.length ? r.branches_seen.join(",") : "(no branch recorded)";
@@ -64,7 +63,7 @@ export function status(): number {
     const pack = whyPackPath(rt.paths, branch);
     const exists = fs.existsSync(pack);
     const anyDirty = sessions.some(
-      ([, r]) => (r.status === "dirty" || fileSize(r.transcript_path) > r.last_distilled_offset),
+      ([id, r]) => r.status === "dirty" || sessionHasNewActivity(id, r),
     );
     say("");
     if (!exists) say(`Current branch '${slugifyBranch(branch)}': no why-pack yet.`);

@@ -8,6 +8,9 @@ import {
   TranscriptMeta,
 } from "./types.js";
 import { claudeProjectDirFor, claudeProjectsDir } from "../util/paths.js";
+import { jsonlHasNew, jsonlUnread, readJsonlSpan } from "./jsonl.js";
+import { TOOL_CLAUDE_CODE } from "./names.js";
+import { SessionCursor } from "./types.js";
 
 /** Tools whose file_path argument means "this session touched this file". */
 const EDITING_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
@@ -163,7 +166,7 @@ function summarizeToolResult(toolName: string, block: any, toolUseResult: any): 
 }
 
 export class ClaudeCodeAdapter implements Adapter {
-  readonly tool = "claude-code";
+  readonly tool = TOOL_CLAUDE_CODE;
 
   discoverSessions(repoPath: string): DiscoveredSession[] {
     const dir = claudeProjectDirFor(repoPath);
@@ -186,17 +189,19 @@ export class ClaudeCodeAdapter implements Adapter {
   }
 
   readTranscript(transcriptPath: string, fromOffset = 0): ReadResult {
-    const fd = fs.openSync(transcriptPath, "r");
-    try {
-      const size = fs.fstatSync(fd).size;
-      if (fromOffset >= size) return { raw: "", newOffset: size };
-      const length = size - fromOffset;
-      const buf = Buffer.alloc(length);
-      fs.readSync(fd, buf, 0, length, fromOffset);
-      return { raw: buf.toString("utf8"), newOffset: size };
-    } finally {
-      fs.closeSync(fd);
-    }
+    return readJsonlSpan(transcriptPath, fromOffset);
+  }
+
+  hasNewActivity(record: SessionCursor): boolean {
+    return jsonlHasNew(record);
+  }
+
+  unreadBytes(record: SessionCursor): number {
+    return jsonlUnread(record);
+  }
+
+  readNew(record: SessionCursor): ReadResult {
+    return this.readTranscript(record.transcript_path, record.last_distilled_offset);
   }
 
   normalizeEvents(raw: string): NormalizedEvent[] {

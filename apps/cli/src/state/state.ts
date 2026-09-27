@@ -18,6 +18,8 @@ export interface SessionRecord {
   first_seen: string;
   last_seen: string;
   last_distilled_offset: number;
+  /** OpenCode message id of the last distilled row. Absent means never distilled. */
+  last_distilled_cursor?: string;
   status: SessionStatus;
   /** Branches this session's entries were written to (for status/repair). */
   distilled_to?: string[];
@@ -129,6 +131,7 @@ export function upsertSession(
       first_seen: patch.first_seen ?? now,
       last_seen: patch.last_seen ?? now,
       last_distilled_offset: patch.last_distilled_offset ?? 0,
+      last_distilled_cursor: patch.last_distilled_cursor,
       status: patch.status ?? "dirty",
       distilled_to: patch.distilled_to,
     };
@@ -141,6 +144,7 @@ export function upsertSession(
   if (patch.last_branch) existing.last_branch = patch.last_branch;
   if (patch.files_touched) existing.files_touched = union(existing.files_touched, patch.files_touched);
   if (patch.last_distilled_offset !== undefined) existing.last_distilled_offset = patch.last_distilled_offset;
+  if (patch.last_distilled_cursor !== undefined) existing.last_distilled_cursor = patch.last_distilled_cursor;
   if (patch.status) existing.status = patch.status;
   if (patch.distilled_to) existing.distilled_to = union(existing.distilled_to ?? [], patch.distilled_to);
   return existing;
