@@ -1,6 +1,6 @@
 {
   "distiller": {
-    "backend": "agent",
+    "backend": "codex",
     "models": {
       "claude": "haiku",
       "agent": "auto",
