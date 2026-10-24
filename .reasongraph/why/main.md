@@ -1,6 +1,6 @@
 # Why: main
 
-<!-- reasongraph:v1 generated 2026-10-17 — review before sharing; edit freely, edits are preserved -->
+<!-- reasongraph:v1 generated 2026-10-24 — review before sharing; edit freely, edits are preserved -->
 
 ## Intent
 Attribute each transcript to the adapter that owns its path, and stop marking a distill finished when a non-empty read yields no events.
@@ -313,14 +313,10 @@ Considered/rejected: NODE_OPTIONS=--no-warnings was rejected because it would hi
 Reviewer attention: Confirm --version and status emit no SQLite experimental warning, and that opening an OpenCode database still constructs DatabaseSync read-only.
 
 ### Keep OpenCode transcript reads on node:sqlite
-Status: directed
-Touches: `apps/cli/**`
+Status: discussed
+Touches: `apps/cli/src/adapters/opencode.ts`, `apps/cli/package.json`
 
-For the CLI’s read-only OpenCode database scan, built-in node:sqlite remains the preferred approach on Node 24: no extra dependency, synchronous DatabaseSync queries, and read-only open. The ExperimentalWarning reflects Active Development of the Node API, not that the SQLite database itself is unsafe. Deferred loading already limits the warning to OpenCode scans.
-
-Considered/rejected: better-sqlite3 was weighed for a stable third-party API but rejected here because it adds native install burden without a clear gain for local read-only scanning. Globally silencing ExperimentalWarning was rejected because it would hide unrelated diagnostics.
-Risk: Node 24 still prints an ExperimentalWarning whenever node:sqlite is loaded for an OpenCode scan.
-Reviewer attention: Confirm package engines still match real node:sqlite availability (from Node 22.5) versus any claimed Node 20 floor.
+OpenCode's SQLite database is read with node:sqlite, and the dependency is loaded only when an OpenCode database is opened. This preserves the native read path while avoiding SQLite startup cost for other adapters.
 
 ### Specify init progress logging as RFC 0009 and leave it Draft
 Status: directed — finish approval closed the draft
@@ -441,24 +437,18 @@ Per the repository RFC process, this pass stayed analysis-only. A single RFC sho
 Reviewer attention: Confirm the RFC is drafted and approved before CLI or hook code lands.
 
 ### Install the plugin with npx @borg0ai/plugins
-Status: discussed
-Touches: `**/install.ts`, `**/plugin.test.ts`
+Status: directed
+Touches: `apps/cli/src/commands/install.ts`, `apps/plugins/*`
 
-The installer runs only npx --yes @borg0ai/plugins add borg0ai/dx-reasongraph --scope project --yes. It no longer uses __dirname to find a local dist. Tests assert that the installer source does not contain LOCAL_PLUGINS_CLI, __dirname, or plugins/dist.
-
-Considered/rejected: Looking up a local plugins dist from the package directory was rejected in favor of the scoped CLI invocation.
-Risk: Tests check source text only, so a missing or incompatible published CLI would not fail this suite.
-Reviewer attention: Confirm install.ts has a single npx invocation with project scope and that the forbidden local-dist strings stay absent.
+The proposed `install()` flow invokes `npx @borg0ai/plugins add borg0ai/dx-reasongraph --scope project --yes`. This uses the package-scoped plugin CLI and avoids a local workspace build path or an unscoped `npx plugins` invocation.
 
 ### Move the plugins package from packages/plugins to apps/plugins
-Status: discussed — halted before command sources were rewritten
-Touches: `apps/plugins/**`, `packages/plugins/**`, `pnpm-workspace.yaml`, `package.json`
+Status: discussed
+Touches: `apps/cli/src/commands/install.ts`, `apps/plugins/*`, `packages/plugins/*`
 
-The plugins package was relocated from packages/plugins to apps/plugins, the packages directory was removed, the packages/* workspace glob was dropped, and root build and lint filters were pointed at apps/plugins. install.ts and add.ts were left unchanged. The relocation follows RFC 0010 and conflicts with install going only through the external plugins CLI.
+The proposed design treats `@borg0ai/plugins` as an executable CLI and places it under `apps/`. The CLI should invoke the scoped package command, rather than resolve a local `dist` file through a workspace-relative path.
 
-Considered/rejected: Leaving the package at packages/plugins.
-Risk: Workspace scripts and paths now assume apps/plugins while the install design does not depend on that package. A homepage URL may still point at packages/plugins.
-Reviewer attention: Confirm whether apps/plugins, the workspace glob, and root script filters should stay or be reverted.
+Considered/rejected: Resolving `packages/plugins/dist/index.js` from `__dirname` was rejected because it relies on source/build directory depth and cannot work from the published CLI package.
 
 ### Leave deletion of the in-repo plugins package unresolved
 Status: discussed
@@ -481,11 +471,11 @@ Reviewer attention: Confirm the workspace contains only apps/* and that no plugi
 
 ### Specify the scoped plugins CLI install as RFC 0010 and mark it implemented
 Status: discussed
-Touches: `.spec/rfc/completed/0010-scoped-plugins-cli-install.md`, `.spec/ROADMAP.md`, `.spec/TASK_TRACKING.md`
+Touches: `.spec/rfc/0010-scoped-plugins-cli-install.md`
 
-RFC 0010 records installing the root plugin through npx @borg0ai/plugins. Its status is Implemented and the file lives under .spec/rfc/completed/. ROADMAP.md and TASK_TRACKING.md point at that completed path. Typecheck passed and 109 tests passed at package version 0.2.0.
+The RFC records the proposed install command and rejects locating a sibling package’s `dist` file by resolving paths from the CLI source. That path strategy depends on repository layout and fails for the published package. The RFC remained Draft and implementation was not changed in this transcript.
 
-Reviewer attention: Confirm the roadmap row and task entry both say Implemented and link to rfc/completed/0010-scoped-plugins-cli-install.md.
+Reviewer attention: Confirm RFC 0010 status and approval before treating its proposed implementation as accepted.
 
 ### Do not invoke the plugins CLI during verification
 Status: directed — live invocation excluded from the check
@@ -511,3 +501,69 @@ Touches: `.reasongraph/why/main.md`
 .reasongraph/why/main.md is hook-generated and was identified as content that should stay out of the commit for this install change. No commit was created.
 
 Reviewer attention: Confirm a later commit does not stage .reasongraph/why/main.md with the install and RFC files.
+
+### Format the existing Nix package to pass CI
+Status: discussed
+Touches: `nix/gopdf.nix`
+
+The Nix formatting check required reformatting an existing `inherit` expression. The change applied the formatter’s expected layout so CI could proceed.
+
+### Fall back to another installed distiller CLI after failure
+Status: discussed
+Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/src/distiller/index.ts`, `apps/cli/test/backends.test.ts`
+
+A configured distiller can fail because its CLI is unavailable or cannot complete a request. The CLI now tries other installed backends after failure, allowing a sync to continue when another backend is usable. This sends transcript content to the fallback backend.
+
+### Show colored session progress in interactive terminals
+Status: directed
+Touches: `apps/cli/src/commands/sync.ts`, `apps/cli/src/commands/distill.ts`, `apps/cli/src/util/log.ts`, `apps/cli/test/log.test.ts`
+
+Per-session progress, chunk counts, elapsed time, and a final summary make long distillation runs observable. Color and interactive progress are limited to TTY output so hooks and pipelines retain plain-text logs.
+
+### Set the local distiller to Codex with medium reasoning effort
+Status: directed
+Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/test/backends.test.ts`, `.reasongraph/state/config.json`
+
+The local configuration selects Codex with model `gpt-6-luna` and explicitly passes medium reasoning effort. Keeping this choice in repository-local state avoids changing the shared backend configuration.
+
+### Consolidate the why-pack design record into AGENTS.md
+Status: directed
+Touches: `AGENTS.md`, `.ai/why/main.md`, `.ai/why/.gitkeep`
+
+The design record was moved into AGENTS.md so repository guidance and its rationale live together. The former .ai files were removed.
+
+### Run CI and release from the scoped CLI package
+Status: discussed
+Touches: `.github/workflows/ci.yml`, `.github/workflows/release.yml`
+
+CI installs dependencies with pnpm and builds and tests @borg0ai/reasongraph. Tagged releases publish from apps/cli with npm provenance, matching the package boundary defined by the redesign.
+
+### Read Codex and cursor-agent transcripts as JSONL
+Status: discussed
+Touches: `apps/cli/src/adapters/codex.ts`, `apps/cli/src/adapters/cursor-agent.ts`, `apps/cli/src/adapters/jsonl.ts`, `apps/cli/src/adapters/index.ts`
+
+Codex sessions are read from ~/.codex/sessions/**/*.jsonl, and cursor-agent sessions from project agent-transcripts directories. JSONL byte offsets provide incremental reads without depending on transcript file size as a general freshness signal.
+
+### Read OpenCode sessions from session_v2 with message cursors
+Status: discussed
+Touches: `apps/cli/src/adapters/opencode.ts`, `apps/cli/src/adapters/types.ts`, `apps/cli/src/state/state.ts`, `apps/cli/test/fixtures/opencode-session.sql`
+
+The adapter reads OpenCode's session_v2 and session_message tables, associates sessions with the repository by directory, and uses the last distilled message ID as its cursor. This handles database updates that do not change the database file size.
+
+### Route freshness checks through transcript adapters
+Status: discussed
+Touches: `apps/cli/src/core/sweep.ts`, `apps/cli/src/core/distillSession.ts`, `apps/cli/src/commands/status.ts`, `apps/cli/src/commands/hook.ts`, `apps/cli/src/adapters/types.ts`
+
+Adapters determine whether their sessions have new activity because transcript formats expose different cursors. Sweep, status, and hook paths use adapter freshness checks instead of comparing file sizes; truncated distillation does not advance the cursor.
+
+### Ignore OpenCode databases that cannot be read as supported transcripts
+Status: discussed
+Touches: `apps/cli/src/adapters/opencode.ts`
+
+An unreadable database or unsupported table layout returns no sessions instead of throwing through init or sync. This keeps optional local transcript discovery from breaking unrelated CLI operations.
+
+### Remove Playwright snapshots from Git tracking
+Status: directed
+Touches: `.gitignore`, `.playwright-mcp/**`
+
+Generated Playwright artifacts are ignored and removed from the Git index while remaining on disk. This keeps local browser snapshots out of repository history.
