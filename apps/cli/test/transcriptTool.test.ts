@@ -73,6 +73,7 @@ test("discoverAndSync rewinds a sealed Codex session mislabeled as claude-code",
   // not the symlinked tmpdir path mkdtemp returns on macOS.
   const repo = fs.realpathSync(tempRepo());
   const sessionsRoot = path.join(os.homedir(), ".codex", "sessions");
+  fs.mkdirSync(sessionsRoot, { recursive: true });
   const dir = fs.mkdtempSync(path.join(sessionsRoot, "reasongraph-test-"));
   const file = path.join(dir, "rollout.jsonl");
   try {
@@ -95,6 +96,7 @@ test("discoverAndSync rewinds a sealed Codex session mislabeled as claude-code",
 test("a mislabeled Codex transcript is distilled by the Codex adapter", async () => {
   const repo = tempRepo();
   const sessionsRoot = path.join(os.homedir(), ".codex", "sessions");
+  fs.mkdirSync(sessionsRoot, { recursive: true });
   const dir = fs.mkdtempSync(path.join(sessionsRoot, "reasongraph-test-"));
   const file = path.join(dir, "rollout.jsonl");
   const seen: string[] = [];
