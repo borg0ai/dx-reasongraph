@@ -510,9 +510,9 @@ The Nix formatting check required reformatting an existing `inherit` expression.
 
 ### Fall back to another installed distiller CLI after failure
 Status: discussed
-Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/src/distiller/index.ts`, `apps/cli/test/backends.test.ts`
+Touches: `apps/cli/src/distiller/backends.ts`, `apps/cli/test/backends.test.ts`
 
-A configured distiller can fail because its CLI is unavailable or cannot complete a request. The CLI now tries other installed backends after failure, allowing a sync to continue when another backend is usable. This sends transcript content to the fallback backend.
+Antigravity joins the automatic fallback candidates, allowing distillation to continue through another installed CLI when the selected backend fails.
 
 ### Show colored session progress in interactive terminals
 Status: directed
@@ -584,4 +584,52 @@ The CLI changes and their tests were committed after typecheck, 111 tests passed
 Status: discussed
 Touches: `Formula/reasongraph.rb`
 
-The formula was updated after the 0.2.3 release completed, keeping its package metadata aligned with the published artifact.
+The formula points to the v0.2.3 release archive and its matching checksum. The update was submitted as a pull request targeting develop, leaving integration to repository review.
+
+### Base the Scoop release branch on the current repository state
+Status: discussed
+Touches: `/Volumes/ORICO/ws/prj/systembug/shennong-bucket`
+
+The Scoop repository had changed since its earlier state, so the release branch was created from the current remote main and kept separate from main. This preserves the newly merged repository history while proposing the version bump for review.
+
+### Submit the Scoop version bump as a pull request
+Status: discussed
+Touches: `/Volumes/ORICO/ws/prj/systembug/shennong-bucket`
+
+The v0.2.3 manifest update was placed on a new release branch and proposed through a pull request. This keeps the bucket's main branch unchanged pending review.
+
+### Bump the Nix package to CLI version 0.2.3
+Status: discussed
+Touches: `Nix package definition`
+
+The Nix package release branch was updated from 0.2.2 to 0.2.3. The build was not validated locally, so Linux CI remains the verification path.
+
+### Publish the CLI release as a versioned archive with checksums
+Status: discussed
+Touches: `package.json`, `dist/*`, `GitHub release assets`
+
+The v0.2.3 release includes a versioned tarball and SHA256SUMS, with the archive checksum checked against a local download. The release commit set included feature changes, the Codex config, and the version bump.
+
+### Use Codex as the repository's distiller backend
+Status: discussed
+Touches: `.reasongraph/config.json`
+
+The committed repository config selects Codex as the distiller backend. The packaged CLI reports Codex with model `gpt-6-luna` for this repository.
+
+### Keep init defaulting new repositories to the agent backend
+Status: discussed
+Touches: `apps/cli/src/commands/init.ts`, `apps/cli/src/util/config.ts`, `apps/cli/test/selfonly.test.ts`, `docs/config.md`
+
+The generated shared configuration and code defaults were changed to Codex, with its default model and medium reasoning effort. Existing repository configuration remains unchanged; the config documentation was updated to match.
+
+### Add an Antigravity distiller backend
+Status: discussed
+Touches: `apps/cli/src`, `apps/cli/test`
+
+The CLI adds Antigravity as a selectable distiller backend. The transcript provides no explicit rationale for this backend choice.
+
+### Add init --agent for selecting the generated distiller
+Status: directed
+Touches: `apps/cli/src`, `apps/cli/test`, `docs/config.md`
+
+Initialization accepts `--agent` to choose the distiller CLI written into the generated repository configuration. This makes backend selection available when seeding a repository.
