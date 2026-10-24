@@ -11,7 +11,7 @@ import {
   infoExcludePath,
   EXCLUDE_FENCE,
 } from "../util/exclude.js";
-import { say, warn } from "../util/log.js";
+import { progress, say, warn } from "../util/log.js";
 import { readState } from "../state/state.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
 import { isNonInteractive, promptYesNo } from "../util/tty.js";
@@ -28,14 +28,21 @@ export interface InitOptions {
 export async function init(opts: InitOptions = {}): Promise<number> {
   const rt = resolveRuntime();
   if (!rt) {
-    warn("not inside a git repository. Run `git init` first, then `reasongraph init`.");
+    warn(
+      "not inside a git repository. Run `git init` first, then `reasongraph init`.",
+    );
     return 1;
   }
   const { repoRoot } = rt;
   const paths = reasongraphPaths(repoRoot);
   const selfOnly = opts.selfOnly === true;
 
-  if (!migrateLegacyWhyPacks(repoRoot, paths.whyDir, selfOnly)) return 1;
+  progress("Setting up ReasonGraph", "info");
+  if (!migrateLegacyWhyPacks(repoRoot, paths.whyDir, selfOnly)) {
+    progress("Legacy why-pack migration failed", "error");
+    return 1;
+  }
+  progress("Legacy why-packs checked");
 
   ensureDir(path.dirname(paths.sharedConfigFile));
 
@@ -45,6 +52,7 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   ensureDir(paths.logsDir);
   const gitkeep = path.join(paths.whyDir, ".gitkeep");
   if (!fs.existsSync(gitkeep)) fs.writeFileSync(gitkeep, "");
+  progress("Created local why-pack and state directories");
 
   // 2 + 3. Config and ignoring. Self-only diverges here: nothing shared is
   // written or committed — the mode lives in local config and the artifacts are
@@ -54,17 +62,32 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   } else {
     setupShared(repoRoot, paths);
   }
+  progress(
+    selfOnly
+      ? "Saved personal config and ignore rules"
+      : "Saved shared config and ignore rules",
+  );
 
   // Shared pointer belongs in the agent instruction file loaded by this repo.
-  const agentsMdResult = selfOnly ? "skipped (self-only)" : ensureAgentsMd(repoRoot);
+  const agentsMdResult = selfOnly
+    ? "skipped (self-only mode)"
+    : ensureAgentsMd(repoRoot);
+  progress(
+    `AGENTS.md pointer ${agentsMdResult}`,
+    selfOnly || agentsMdResult === "already present" ? "info" : "success",
+  );
 
   // Agent lifecycle hooks are owned by the installed ReasonGraph plugin.
   // Git pre-push is outside agent plugin lifecycle, so init owns it.
   const prePushResult = installPrePushHook(repoRoot);
+  progress(
+    `Git pre-push hook ${prePushResult}`,
+    prePushResult === "installed" ? "success" : "info",
+  );
 
   // 6. Explain.
   say("");
-  say(selfOnly ? "reasongraph initialized (self-only, personal mode)." : "reasongraph initialized.");
+  progress("ReasonGraph initialized");
   say("");
   say("Installed:");
   if (selfOnly) {
@@ -72,24 +95,42 @@ export async function init(opts: InitOptions = {}): Promise<number> {
     say(`  • .git/info/exclude   ignores ReasonGraph data (private)`);
     say(`  • AGENTS.md pointer   skipped in self-only mode`);
   } else {
-    say(`  • .reasongraph/why/   shared why-packs (committed — this is what everyone reads)`);
+    say(
+      `  • .reasongraph/why/   shared why-packs (committed — this is what everyone reads)`,
+    );
     say(`  • .reasongraph/config.json team config (committed)`);
     say(`  • .reasongraph/state/    local state (gitignored)`);
-    say(`  • AGENTS.md pointer   ${agentsMdResult} (tells agents to read .reasongraph/why/)`);
+    say(
+      `  • AGENTS.md pointer   ${agentsMdResult} (tells agents to read .reasongraph/why/)`,
+    );
   }
-  say("  • Agent hooks         run `reasongraph install` to install the plugin");
+  say(
+    "  • Agent hooks         run `reasongraph install` to install the plugin",
+  );
   say(`  • git pre-push hook   ${prePushResult}`);
   say("");
   if (selfOnly) {
     say("Self-only mode:");
-    say("  Nothing reasongraph produces is committed or shared. Why-packs are personal");
-    say("  notes for you and your own future agents, ignored via .git/info/exclude.");
+    say(
+      "  Nothing reasongraph produces is committed or shared. Why-packs are personal",
+    );
+    say(
+      "  notes for you and your own future agents, ignored via .git/info/exclude.",
+    );
   } else {
     say("Privacy model:");
-    say("  Your session transcript never leaves this machine. At session end (and as a");
-    say("  catch-up at git push) ReasonGraph distills a privacy-filtered digest of the");
-    say("  decisions — never your messages, never your questions — into .reasongraph/why/. That");
-    say("  markdown is the only shared artifact. Review before pushing; edits are kept.");
+    say(
+      "  Your session transcript never leaves this machine. At session end (and as a",
+    );
+    say(
+      "  catch-up at git push) ReasonGraph distills a privacy-filtered digest of the",
+    );
+    say(
+      "  decisions — never your messages, never your questions — into .reasongraph/why/. That",
+    );
+    say(
+      "  markdown is the only shared artifact. Review before pushing; edits are kept.",
+    );
   }
   say("");
   say("Now just work. `agent`, let it commit, `git push`. That's it.");
@@ -99,14 +140,24 @@ export async function init(opts: InitOptions = {}): Promise<number> {
 }
 
 /** Move old packs once; preflight every collision before changing either tree. */
-function migrateLegacyWhyPacks(repoRoot: string, whyDir: string, selfOnly: boolean): boolean {
+function migrateLegacyWhyPacks(
+  repoRoot: string,
+  whyDir: string,
+  selfOnly: boolean,
+): boolean {
   const legacyDir = path.join(repoRoot, ".ai", "why");
   if (!fs.existsSync(legacyDir)) return true;
 
-  const packs = fs.readdirSync(legacyDir).filter((name) => name.endsWith(".md"));
-  const conflicts = packs.filter((name) => fs.existsSync(path.join(whyDir, name)));
+  const packs = fs
+    .readdirSync(legacyDir)
+    .filter((name) => name.endsWith(".md"));
+  const conflicts = packs.filter((name) =>
+    fs.existsSync(path.join(whyDir, name)),
+  );
   if (conflicts.length) {
-    warn(`cannot migrate .ai/why/: destination already has ${conflicts.join(", ")}`);
+    warn(
+      `cannot migrate .ai/why/: destination already has ${conflicts.join(", ")}`,
+    );
     return false;
   }
 
@@ -118,7 +169,8 @@ function migrateLegacyWhyPacks(repoRoot: string, whyDir: string, selfOnly: boole
     if (selfOnly) fs.copyFileSync(source, destination);
     else fs.renameSync(source, destination);
   }
-  if (!selfOnly && fs.readdirSync(legacyDir).length === 0) fs.rmdirSync(legacyDir);
+  if (!selfOnly && fs.readdirSync(legacyDir).length === 0)
+    fs.rmdirSync(legacyDir);
   return true;
 }
 
@@ -131,18 +183,27 @@ function migrateLegacyWhyPacks(repoRoot: string, whyDir: string, selfOnly: boole
  * human's call, exactly like the pre-push flow. Never commits, never stages.
  */
 async function offerBackfill(repoRoot: string): Promise<number> {
+  progress("Checking local session history", "info");
   // Cheap: discover lists transcript files and stats sizes — no parsing, no LLM.
   const { state } = readState(reasongraphPaths(repoRoot));
   discoverAndSync(repoRoot, state);
   const pending = sessionsNeedingDistill(repoRoot, state);
-  if (pending.length === 0) return 0;
+  if (pending.length === 0) {
+    progress("No prior sessions need backfill");
+    return 0;
+  }
 
   const n = pending.length;
   const plural = n === 1 ? "session" : "sessions";
+  progress(`Found ${n} prior ${plural} for backfill`, "info");
   if (isNonInteractive()) {
     say("");
-    say(`reasongraph: found ${n} prior Claude ${plural} for this repo not yet distilled.`);
-    say("  Run `reasongraph distill` to seed the why-pack from your local history.");
+    say(
+      `reasongraph: found ${n} prior Claude ${plural} for this repo not yet distilled.`,
+    );
+    say(
+      "  Run `reasongraph distill` to seed the why-pack from your local history.",
+    );
     return 0;
   }
 
@@ -153,15 +214,21 @@ async function offerBackfill(repoRoot: string): Promise<number> {
       `  (Nothing is committed — you review .reasongraph/why/ before sharing.) [y/N] `,
   );
   if (!yes) {
-    say("  Skipped. Run `reasongraph distill` whenever you're ready to backfill.");
+    say(
+      "  Skipped. Run `reasongraph distill` whenever you're ready to backfill.",
+    );
     return 0;
   }
 
   say("");
-  say(`reasongraph: distilling ${n} ${plural}… (Ctrl-C to stop; partial progress is kept)`);
+  say(
+    `reasongraph: distilling ${n} ${plural}… (Ctrl-C to stop; partial progress is kept)`,
+  );
   const code = await distill({ allDirty: true });
   say("");
-  say("reasongraph: backfill done. Review .reasongraph/why/ before you commit — nothing was staged.");
+  say(
+    "reasongraph: backfill done. Review .reasongraph/why/ before you commit — nothing was staged.",
+  );
   return code;
 }
 
@@ -169,7 +236,10 @@ async function offerBackfill(repoRoot: string): Promise<number> {
 function setupShared(repoRoot: string, paths: reasongraphPaths): void {
   ensureDir(path.dirname(paths.sharedConfigFile));
   if (!fs.existsSync(paths.sharedConfigFile)) {
-    writeFileAtomic(paths.sharedConfigFile, JSON.stringify(defaultSharedConfig(), null, 2) + "\n");
+    writeFileAtomic(
+      paths.sharedConfigFile,
+      JSON.stringify(defaultSharedConfig(), null, 2) + "\n",
+    );
   }
   if (!fs.existsSync(paths.localConfigFile)) {
     writeFileAtomic(paths.localConfigFile, JSON.stringify({}, null, 2) + "\n");
@@ -198,9 +268,13 @@ function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
   }
   // Ignore personal why-packs and state.
   const excl = infoExcludePath(repoRoot);
-  if (excl) ensureBlock(excl, EXCLUDE_FENCE, [".reasongraph/why/", ".reasongraph/state/"]);
-  else warn("could not resolve .git/info/exclude — artifacts were not ignored.");
-
+  if (excl)
+    ensureBlock(excl, EXCLUDE_FENCE, [
+      ".reasongraph/why/",
+      ".reasongraph/state/",
+    ]);
+  else
+    warn("could not resolve .git/info/exclude — artifacts were not ignored.");
 }
 
 function readLocalConfig(paths: reasongraphPaths): Record<string, unknown> {
@@ -208,7 +282,9 @@ function readLocalConfig(paths: reasongraphPaths): Record<string, unknown> {
     const parsed = JSON.parse(fs.readFileSync(paths.localConfigFile, "utf8"));
     // Guard against a hand-corrupted config (null/array/primitive) so setting
     // `.selfOnly` below can't throw and abort init.
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : {};
   } catch {
     return {};
   }
@@ -227,7 +303,10 @@ function ensureGitignore(repoRoot: string): void {
   const missing = wanted.filter((l) => !present.has(l));
   if (missing.length === 0) return;
   const prefix = contents && !contents.endsWith("\n") ? "\n" : "";
-  fs.appendFileSync(file, `${prefix}\n# ReasonGraph local state (per-machine)\n${missing.join("\n")}\n`);
+  fs.appendFileSync(
+    file,
+    `${prefix}\n# ReasonGraph local state (per-machine)\n${missing.join("\n")}\n`,
+  );
 }
 
 const AGENTS_MD_BEGIN = "<!-- reasongraph:begin -->";
@@ -268,7 +347,9 @@ export function ensureAgentsMd(repoRoot: string): string {
     // Refresh the managed block in place if it's out of date (e.g. this machine
     // upgraded reasongraph). Only our marked region is touched; the rest is the
     // user's. Idempotent when already current.
-    const re = new RegExp(`${escapeRe(AGENTS_MD_BEGIN)}[\\s\\S]*?${escapeRe(AGENTS_MD_END)}`);
+    const re = new RegExp(
+      `${escapeRe(AGENTS_MD_BEGIN)}[\\s\\S]*?${escapeRe(AGENTS_MD_END)}`,
+    );
     const current = existing.match(re)?.[0];
     if (current === AGENTS_MD_BLOCK) return "already present";
     writeFileAtomic(file, existing.replace(re, AGENTS_MD_BLOCK));
@@ -337,7 +418,9 @@ function installPrePushHook(repoRoot: string): string {
   )
     managers.push("lefthook");
   if (managers.length) {
-    say(`  (detected ${managers.join(", ")} — reasongraph's block was chained; keep it if you re-run their install)`);
+    say(
+      `  (detected ${managers.join(", ")} — reasongraph's block was chained; keep it if you re-run their install)`,
+    );
   }
 
   return verb;

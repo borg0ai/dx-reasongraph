@@ -8,10 +8,15 @@ import { pluginInstallArgs } from "../src/commands/install.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const pluginRoot = path.join(repoRoot, "reasongraph");
 
-test("install uses Vercel plugins against the repository source at project scope", () => {
+test("install uses @borg0ai/plugins against the repository source at project scope", () => {
   assert.deepEqual(pluginInstallArgs(), [
-    "--yes", "plugins", "add", "borg0ai/dx-reasongraph", "--scope", "project", "--yes",
+    "--yes", "@borg0ai/plugins", "add", "borg0ai/dx-reasongraph", "--scope", "project", "--yes",
   ]);
+});
+
+test("install does not locate @borg0ai/plugins through the filesystem", () => {
+  const src = fs.readFileSync(path.join(repoRoot, "apps", "cli", "src", "commands", "install.ts"), "utf8");
+  assert.doesNotMatch(src, /LOCAL_PLUGINS_CLI|__dirname|plugins\/dist/);
 });
 
 test("root plugin exposes hooks and a skill that closes the CLI context and sync loop", () => {

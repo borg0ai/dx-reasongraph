@@ -10,3 +10,5 @@
 | 0006 | [Ship a why-pack-aware reviewer agent via PromptScript](rfc/0006-promptscript-reviewer-agent.md) | Draft |
 | 0007 | [Distill Codex, OpenCode, and cursor-agent sessions](rfc/completed/0007-agent-transcript-adapters.md) | Implemented |
 | 0008 | [Attribute each transcript to the adapter that owns it](rfc/completed/0008-transcript-tool-attribution.md) | Implemented |
+| 0009 | [Improve init command progress and output](rfc/completed/0009-init-command-progress.md) | Implemented |
+| 0010 | [Install the root plugin through npx @borg0ai/plugins](rfc/completed/0010-scoped-plugins-cli-install.md) | Implemented |
