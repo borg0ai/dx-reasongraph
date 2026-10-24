@@ -1,13 +1,10 @@
 name: Release
 
-# Publish @borg0ai/reasongraph when a version tag (v*) is pushed. Cut the
+# Create a GitHub Release with the packed CLI tarball when a version tag (v*)
+# is pushed. Package channels (luban-homebrew, cangjie-nix, shennong-bucket)
+# install from these release assets; nothing is published to npm. Cut the
 # release by hand from apps/cli — `npm version <patch|minor|major>` then
-# `git push --follow-tags` — so the decision to ship stays a human gate; this
-# only automates the rote build-test-publish once you've made that call.
-#
-# One-time setup: add an `NPM_TOKEN` repo secret (npm → Access Tokens →
-# Granular/Automation token with publish rights for `@borg0ai/reasongraph`),
-# under Settings → Secrets and variables → Actions.
+# `git push --follow-tags` — so the decision to ship stays a human gate.
 
 on:
   push:
@@ -15,11 +12,10 @@ on:
       - "v*"
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write # lets npm attach build provenance to the published package
+      contents: write # create the GitHub Release and upload assets
     steps:
       - uses: actions/checkout@v7
       # No `version:` here — packageManager in the root package.json pins pnpm.
@@ -28,12 +24,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @borg0ai/reasongraph typecheck
       - run: pnpm --filter @borg0ai/reasongraph build
       - run: pnpm --filter @borg0ai/reasongraph test
-      - run: npm publish --access public --provenance
+      - name: Pack tarball and checksums
         working-directory: apps/cli
+        run: |
+          test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+          npm pack
+          shasum -a 256 *.tgz > SHA256SUMS
+      - run: gh release create "$GITHUB_REF_NAME" apps/cli/*.tgz apps/cli/SHA256SUMS --verify-tag --generate-notes
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
