@@ -579,3 +579,9 @@ Status: directed
 Touches: `apps/cli/src`, `apps/cli/test`
 
 The CLI changes and their tests were committed after typecheck, 111 tests passed, and ESLint reported no issues. The changes include distiller fallback, interactive progress output, and Codex reasoning-effort configuration.
+
+### Update the Homebrew formula to the released CLI artifact
+Status: discussed
+Touches: `Formula/reasongraph.rb`
+
+The formula was updated after the 0.2.3 release completed, keeping its package metadata aligned with the published artifact.
