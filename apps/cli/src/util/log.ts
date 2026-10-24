@@ -45,6 +45,41 @@ export function progress(
   );
 }
 
+/** True when stdout is a color-capable terminal (never inside hooks or pipes). */
+export function richOutput(): boolean {
+  return supportsColor(Boolean(process.stdout.isTTY), process.env.NO_COLOR);
+}
+
+/** Wrap text in an ANSI style; plain text when `enabled` is false. */
+export function paint(code: number, text: string, enabled: boolean = richOutput()): string {
+  return enabled ? `\u001b[${code}m${text}\u001b[0m` : text;
+}
+
+export const style = {
+  bold: (t: string) => paint(1, t),
+  dim: (t: string) => paint(2, t),
+  red: (t: string) => paint(31, t),
+  green: (t: string) => paint(32, t),
+  yellow: (t: string) => paint(33, t),
+  magenta: (t: string) => paint(35, t),
+  cyan: (t: string) => paint(36, t),
+};
+
+/** Fixed-width progress bar, e.g. `███░░░░░`. */
+export function renderBar(done: number, total: number, width = 20): string {
+  const filled = total > 0 ? Math.round((Math.min(done, total) / total) * width) : 0;
+  return "█".repeat(filled) + "░".repeat(width - filled);
+}
+
+/** Rewrite the current terminal line in place (TTY only). */
+export function liveLine(text: string): void {
+  process.stdout.write(`\r\u001b[2K${text}`);
+}
+
+export function clearLiveLine(): void {
+  process.stdout.write("\r\u001b[2K");
+}
+
 /** Non-fatal warning to stderr. */
 export function warn(msg: string): void {
   process.stderr.write(`reasongraph: ${msg}\n`);

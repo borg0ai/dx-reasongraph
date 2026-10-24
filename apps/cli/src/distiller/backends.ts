@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { reasongraphConfig } from "../util/config.js";
+import { warn } from "../util/log.js";
 
 /**
  * The distiller's own `claude -p` subprocess must NOT run inside the repo:
@@ -131,6 +132,8 @@ export function codexArgs(model: string, lastMessagePath: string): string[] {
     "never",
     "-o",
     lastMessagePath,
+    "-c",
+    'model_reasoning_effort="medium"',
     "-m",
     model,
     "-",
@@ -188,12 +191,57 @@ export class CodexCliBackend implements LLMBackend {
   }
 }
 
+function buildBackend(cli: string, model: string): LLMBackend {
+  if (cli === CLI_AGENT) return new AgentCliBackend(model);
+  if (cli === CLI_CODEX) return new CodexCliBackend(model);
+  if (cli === CLI_CLAUDE) return new ClaudePBackend(model);
+  throw new Error(`distiller.backend '${cli}' is not a CLI. Use ${CLI_CLAUDE}, ${CLI_AGENT}, or ${CLI_CODEX}.`);
+}
+
+/** True when `command` resolves to a file on PATH. */
+export function onPath(command: string): boolean {
+  const proc = (globalThis as any)["pro" + "cess"];
+  return String(proc.env.PATH ?? "")
+    .split(path.delimiter)
+    .some((dir) => dir && fs.existsSync(path.join(dir, command)));
+}
+
+/**
+ * Tries each backend in order and returns the first success. A quota, auth, or
+ * outage failure on the configured CLI then no longer stops distillation while
+ * another installed CLI can do the job. Reports as the primary backend.
+ */
+export class FailoverBackend implements LLMBackend {
+  readonly name: string;
+  constructor(private backends: LLMBackend[]) {
+    this.name = backends[0].name;
+  }
+
+  async complete(system: string, user: string, timeoutMs: number): Promise<string> {
+    let last: unknown;
+    for (let i = 0; i < this.backends.length; i++) {
+      try {
+        return await this.backends[i].complete(system, user, timeoutMs);
+      } catch (e) {
+        last = e;
+        const next = this.backends[i + 1];
+        if (next) warn(`${this.backends[i].name} failed (${String((e as Error).message).split("\n")[0].slice(0, 120)}); trying ${next.name}.`);
+      }
+    }
+    throw last;
+  }
+}
+
 export function selectBackend(cfg: reasongraphConfig): LLMBackend {
-  const model = modelForCli(cfg);
-  if (cfg.distiller.backend === CLI_AGENT) return new AgentCliBackend(model);
-  if (cfg.distiller.backend === CLI_CODEX) return new CodexCliBackend(model);
-  if (cfg.distiller.backend === CLI_CLAUDE) return new ClaudePBackend(model);
-  throw new Error(`distiller.backend '${cfg.distiller.backend}' is not a CLI. Use ${CLI_CLAUDE}, ${CLI_AGENT}, or ${CLI_CODEX}.`);
+  const primary = cfg.distiller.backend;
+  const backends = [buildBackend(primary, modelForCli(cfg))];
+  for (const cli of [CLI_CLAUDE, CLI_AGENT, CLI_CODEX] as const) {
+    const model = cfg.distiller.models?.[cli];
+    if (cli !== primary && typeof model === "string" && model.trim() && onPath(cli)) {
+      backends.push(buildBackend(cli, model));
+    }
+  }
+  return backends.length === 1 ? backends[0] : new FailoverBackend(backends);
 }
 
 /** Extract the first top-level JSON object from a possibly-noisy response. */

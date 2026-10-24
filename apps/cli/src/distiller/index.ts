@@ -47,7 +47,7 @@ export async function distillEvents(
   events: NormalizedEvent[],
   cfg: reasongraphConfig,
   backend: LLMBackend,
-  opts: { knownTitles?: string[]; deadline?: number } = {},
+  opts: { knownTitles?: string[]; deadline?: number; onProgress?: (done: number, total: number) => void } = {},
 ): Promise<DistillOutcome> {
   if (events.length === 0) {
     return { ok: true, pack: emptyPack() };
@@ -69,6 +69,7 @@ export async function distillEvents(
   // is indistinguishable from N independent chunk flakes — the operator sees
   // "all 1 chunk(s) failed" and has no idea the distiller never reached a model.
   let firstError: string | undefined;
+  let settled = 0;
   let cursor = 0; // next chunk to claim; `i = cursor++` is atomic on one thread
 
   const worker = async (): Promise<void> => {
@@ -94,6 +95,7 @@ export async function distillEvents(
         chunkFailures++;
         firstError ??= e instanceof Error ? e.message : String(e);
       }
+      opts.onProgress?.(++settled, chunks.length);
     }
   };
 

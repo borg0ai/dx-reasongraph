@@ -49,7 +49,7 @@ export async function distillSession(
   state: StateFile,
   cfg: reasongraphConfig,
   backend: LLMBackend,
-  opts: { branchOverride?: string; deadline?: number } = {},
+  opts: { branchOverride?: string; deadline?: number; onProgress?: (done: number, total: number) => void } = {},
 ): Promise<DistillSessionResult> {
   const paths = reasongraphPaths(repoRoot);
   const record = state.sessions[sessionId];
@@ -138,7 +138,7 @@ export async function distillSession(
     writeSession(paths, sessionId, record);
     return { ...base, reason: NO_EVENTS_REASON };
   }
-  const outcome = await distillEvents(events, cfg, backend, { knownTitles, deadline: opts.deadline });
+  const outcome = await distillEvents(events, cfg, backend, { knownTitles, deadline: opts.deadline, onProgress: opts.onProgress });
   if (!outcome.ok) {
     // Stay dirty; retried at next pre-push. Push is never blocked by this.
     record.status = "dirty";

@@ -1,6 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { agentArgs, codexArgs, modelForCli, selectBackend } from "../src/distiller/backends.js";
+import { agentArgs, codexArgs, modelForCli, selectBackend, FailoverBackend } from "../src/distiller/backends.js";
 import { DEFAULT_CONFIG, defaultSharedConfig, reasongraphConfig } from "../src/util/config.js";
 
 function cfg(backend: reasongraphConfig["distiller"]["backend"], model: string): reasongraphConfig {
@@ -42,10 +42,20 @@ test("agent and codex always receive the model configured for that CLI", () => {
   const codex = codexArgs("gpt-6-luna", "/tmp/last.txt");
   assert.equal(codex[codex.indexOf("-s") + 1], "read-only");
   assert.equal(codex[codex.indexOf("-m") + 1], "gpt-6-luna");
+  assert.equal(codex[codex.indexOf("-c") + 1], 'model_reasoning_effort="medium"');
   assert.equal(codex.at(-1), "-");
 });
 
 test("a CLI with no model is rejected", () => {
   const broken = cfg("agent", "  ");
   assert.throws(() => modelForCli(broken), /distiller\.models\.agent is required/);
+});
+
+test("failover backend falls through to the next backend and reports the primary name", async () => {
+  const failing = { name: "agent", complete: async () => { throw new Error("quota"); } };
+  const working = { name: "claude", complete: async () => "ok" };
+  const b = new FailoverBackend([failing, working]);
+  assert.equal(b.name, "agent");
+  assert.equal(await b.complete("s", "u", 1000), "ok");
+  await assert.rejects(new FailoverBackend([failing, failing]).complete("s", "u", 1000), /quota/);
 });
