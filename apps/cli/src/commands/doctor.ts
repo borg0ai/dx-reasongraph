@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { resolveRuntime, isInitialized } from "../util/runtime.js";
-import { DistillerBackend, isDisabled } from "../util/config.js";
+import { CLI_COMMAND, DistillerBackend, isDisabled } from "../util/config.js";
 import { readState } from "../state/state.js";
 import { discoverAndSync, sessionsNeedingDistill } from "../core/sweep.js";
 import { claudeProjectDirFor } from "../util/paths.js";
@@ -125,8 +125,8 @@ function prePushInstalled(repoRoot: string): boolean {
 
 function backendStatus(backend: DistillerBackend, model: string | undefined): { ok: boolean; msg: string } {
   if (!model?.trim()) return { ok: false, msg: `distiller backend: ${backend} has no distiller.models.${backend}` };
-  const res = spawnSync(backend, ["--version"], { encoding: "utf8", timeout: 5000 });
+  const res = spawnSync(CLI_COMMAND[backend], ["--version"], { encoding: "utf8", timeout: 5000 });
   const version = (res.stdout || res.stderr || "").trim().split("\n")[0];
   if (res.status === 0) return { ok: true, msg: `distiller backend: ${backend} model ${model} (${version})` };
-  return { ok: false, msg: `distiller backend: \`${backend}\` is not on PATH` };
+  return { ok: false, msg: `distiller backend: \`${CLI_COMMAND[backend]}\` is not on PATH` };
 }

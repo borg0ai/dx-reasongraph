@@ -1,13 +1,30 @@
 import * as fs from "node:fs";
 import { reasongraphPaths } from "./paths.js";
 
-export type DistillerBackend = "claude" | "agent" | "codex";
+export type DistillerBackend = "claude" | "agent" | "codex" | "antigravity";
+
+/** Executable each distiller backend runs. */
+export const CLI_COMMAND: Record<DistillerBackend, string> = {
+  claude: "claude",
+  agent: "agent",
+  codex: "codex",
+  antigravity: "agy",
+};
+
+/** `init --agent` names, as users know the tools, mapped to distiller backends. */
+export const AGENT_BACKENDS: Record<string, DistillerBackend> = {
+  claude: "claude",
+  codex: "codex",
+  cursor: "agent",
+  antigravity: "antigravity",
+};
 
 /** Model id for each distiller CLI. The active backend reads only its own entry. */
 export interface CliModels {
   claude: string;
   agent: string;
   codex: string;
+  antigravity: string;
 }
 
 export interface reasongraphConfig {
@@ -64,11 +81,12 @@ export interface reasongraphConfig {
 
 export const DEFAULT_CONFIG: reasongraphConfig = {
   distiller: {
-    backend: "agent",
+    backend: "codex",
     models: {
       claude: "haiku",
       agent: "auto",
       codex: "gpt-6-luna",
+      antigravity: "gemini-3.8-flash-medium",
     },
     concurrency: 3,
   },

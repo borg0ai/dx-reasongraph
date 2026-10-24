@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import * as os from "node:os";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { reasongraphConfig } from "../util/config.js";
+import { CLI_COMMAND, reasongraphConfig } from "../util/config.js";
 import { warn } from "../util/log.js";
 
 /**
@@ -19,6 +19,7 @@ export const DISTILLING_ENV = "REASONGRAPH_DISTILLING";
 const CLI_CLAUDE = "claude";
 const CLI_AGENT = "agent";
 const CLI_CODEX = "codex";
+const CLI_ANTIGRAVITY = "antigravity";
 const OUTPUT_FORMAT_TEXT = "text";
 const AGENT_MODE_ASK = "ask";
 const CODEX_SANDBOX_READ_ONLY = "read-only";
@@ -140,6 +141,11 @@ export function codexArgs(model: string, lastMessagePath: string): string[] {
   ];
 }
 
+/** `agy` takes its prompt as the value of `-p` (stdin is ignored), so it is attached with `=`. */
+export function antigravityArgs(model: string, prompt: string): string[] {
+  return ["--output-format", OUTPUT_FORMAT_TEXT, "--sandbox", "--model", model, `-p=${prompt}`];
+}
+
 /** Headless Claude Code. The model is `distiller.models.claude`. */
 export class ClaudePBackend implements LLMBackend {
   readonly name = CLI_CLAUDE;
@@ -192,10 +198,11 @@ export class CodexCliBackend implements LLMBackend {
 }
 
 function buildBackend(cli: string, model: string): LLMBackend {
+  if (cli === CLI_ANTIGRAVITY) return new AntigravityCliBackend(model);
   if (cli === CLI_AGENT) return new AgentCliBackend(model);
   if (cli === CLI_CODEX) return new CodexCliBackend(model);
   if (cli === CLI_CLAUDE) return new ClaudePBackend(model);
-  throw new Error(`distiller.backend '${cli}' is not a CLI. Use ${CLI_CLAUDE}, ${CLI_AGENT}, or ${CLI_CODEX}.`);
+  throw new Error(`distiller.backend '${cli}' is not a CLI. Use ${CLI_CLAUDE}, ${CLI_AGENT}, ${CLI_CODEX}, or ${CLI_ANTIGRAVITY}.`);
 }
 
 /** True when `command` resolves to a file on PATH. */
@@ -232,12 +239,26 @@ export class FailoverBackend implements LLMBackend {
   }
 }
 
+/**
+ * Antigravity's `agy` in print mode inside its sandbox. The model is
+ * `distiller.models.antigravity`. Auth stays inside the CLI.
+ */
+export class AntigravityCliBackend implements LLMBackend {
+  readonly name = CLI_ANTIGRAVITY;
+  constructor(private model: string) {}
+
+  complete(system: string, user: string, timeoutMs: number): Promise<string> {
+    const prompt = `${system}\n\n${user}`;
+    return runIsolatedCli(CLI_COMMAND.antigravity, antigravityArgs(this.model, prompt), "", timeoutMs, CLI_ANTIGRAVITY);
+  }
+}
+
 export function selectBackend(cfg: reasongraphConfig): LLMBackend {
   const primary = cfg.distiller.backend;
   const backends = [buildBackend(primary, modelForCli(cfg))];
-  for (const cli of [CLI_CLAUDE, CLI_AGENT, CLI_CODEX] as const) {
+  for (const cli of [CLI_CLAUDE, CLI_AGENT, CLI_CODEX, CLI_ANTIGRAVITY] as const) {
     const model = cfg.distiller.models?.[cli];
-    if (cli !== primary && typeof model === "string" && model.trim() && onPath(cli)) {
+    if (cli !== primary && typeof model === "string" && model.trim() && onPath(CLI_COMMAND[cli])) {
       backends.push(buildBackend(cli, model));
     }
   }

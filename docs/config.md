@@ -5,8 +5,8 @@
 ```json
 {
   "distiller": {
-    "backend": "agent",
-    "models": { "claude": "haiku", "agent": "auto", "codex": "gpt-6-luna" },
+    "backend": "codex",
+    "models": { "claude": "haiku", "agent": "auto", "codex": "gpt-6-luna", "antigravity": "gemini-3.8-flash-medium" },
     "concurrency": 3
   },
   "redaction": ["INTERNAL_CODENAME"],
@@ -37,8 +37,8 @@ commit in personal mode.
 
 | key | what it does |
 |---|---|
-| `distiller.backend` | Which CLI distills. `"agent"` (default) runs Cursor's `agent -p --mode ask` (read-only), model `models.agent`. `"claude"` runs `claude -p`. `"codex"` runs `codex exec` in a read-only sandbox. Each CLI uses its own login. |
-| `distiller.models` | Model id for each CLI. The running backend uses only its own key: `models.claude`, `models.agent`, or `models.codex`. Changing `backend` does not reuse another CLI's model. |
+| `distiller.backend` | Which CLI distills. `"codex"` (default) runs `codex exec` in a read-only sandbox, model `models.codex`, reasoning effort `medium`. `"claude"` runs `claude -p`. `"agent"` runs Cursor's `agent -p --mode ask` (read-only). `"antigravity"` runs `agy -p` in its sandbox. Pick one at setup with `reasongraph init --agent claude|codex|cursor|antigravity` (`cursor` selects `"agent"`); it rewrites `distiller.backend` and keeps the rest of the config. If the chosen CLI fails, the distiller tries the other installed CLIs. Each CLI uses its own login. |
+| `distiller.models` | Model id for each CLI. The running backend uses only its own key: `models.claude`, `models.agent`, `models.codex`, or `models.antigravity`. Changing `backend` does not reuse another CLI's model. |
 | `distiller.concurrency` | How many transcript chunks distill at once (default `3`). Each call spawns a CLI, so 3 stays inside the pre-push budget. |
 | `chunkChars` | How much transcript goes to the model per call (default `100000`). Bigger means fewer calls, so less overhead, but a slower single call — which matters against `timeBudgetMs`. Rarely worth touching. |
 | `redaction` | Extra "never leak this" regexes, layered on top of the built-in secret/privacy/finance checks. |

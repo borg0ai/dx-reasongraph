@@ -1,6 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { agentArgs, codexArgs, modelForCli, selectBackend, FailoverBackend } from "../src/distiller/backends.js";
+import { agentArgs, antigravityArgs, codexArgs, modelForCli, selectBackend, FailoverBackend } from "../src/distiller/backends.js";
 import { DEFAULT_CONFIG, defaultSharedConfig, reasongraphConfig } from "../src/util/config.js";
 
 function cfg(backend: reasongraphConfig["distiller"]["backend"], model: string): reasongraphConfig {
@@ -14,11 +14,11 @@ function cfg(backend: reasongraphConfig["distiller"]["backend"], model: string):
   };
 }
 
-test("init's shared config defaults the distiller to agent", () => {
-  assert.equal(DEFAULT_CONFIG.distiller.backend, "agent");
-  const shared = defaultSharedConfig() as { distiller: { backend: string; models: { agent: string } } };
-  assert.equal(shared.distiller.backend, "agent");
-  assert.equal(shared.distiller.models.agent, "auto");
+test("init's shared config defaults the distiller to codex", () => {
+  assert.equal(DEFAULT_CONFIG.distiller.backend, "codex");
+  const shared = defaultSharedConfig() as { distiller: { backend: string; models: { codex: string } } };
+  assert.equal(shared.distiller.backend, "codex");
+  assert.equal(shared.distiller.models.codex, "gpt-6-luna");
 });
 
 test("the active CLI uses only its own model", () => {
@@ -58,4 +58,11 @@ test("failover backend falls through to the next backend and reports the primary
   assert.equal(b.name, "agent");
   assert.equal(await b.complete("s", "u", 1000), "ok");
   await assert.rejects(new FailoverBackend([failing, failing]).complete("s", "u", 1000), /quota/);
+});
+
+test("antigravity attaches the prompt to -p and selects its own model", () => {
+  const args = antigravityArgs("gemini-3.8-flash-medium", "hello");
+  assert.equal(args.at(-1), "-p=hello");
+  assert.equal(args[args.indexOf("--model") + 1], "gemini-3.8-flash-medium");
+  assert.ok(args.includes("--sandbox"));
 });

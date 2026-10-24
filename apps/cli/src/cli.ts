@@ -42,7 +42,8 @@ function usage(): void {
   process.stdout.write(`reasongraph ${VERSION} — your agent writes down WHY, in the repo.
 
 Usage:
-  reasongraph init [--self-only]     Seed .reasongraph/ and Git hook (idempotent)
+  reasongraph init [opts]            Seed .reasongraph/ and Git hook (idempotent)
+      --agent <cli>                    distiller CLI: claude | codex | cursor | antigravity
       --self-only                      personal mode: commit nothing; ignore
                                        artifacts via .git/info/exclude
   reasongraph install                Install agent plugin with npx plugins
@@ -73,7 +74,10 @@ async function main(): Promise<number> {
       return install();
     case "init": {
       const { flags } = parseFlags(rest);
-      return init({ selfOnly: flags["self-only"] === true });
+      return init({
+        selfOnly: flags["self-only"] === true,
+        agent: typeof flags.agent === "string" ? flags.agent : undefined,
+      });
     }
     case "distill": {
       const { flags } = parseFlags(rest);

@@ -172,10 +172,10 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
   const shared = JSON.parse(read(dir, ".reasongraph/config.json"));
   assert.equal(
     shared.distiller.backend,
-    "agent",
-    "init defaults the distiller CLI to agent",
+    "codex",
+    "init defaults the distiller CLI to codex",
   );
-  assert.equal(shared.distiller.models.agent, "auto");
+  assert.equal(shared.distiller.models.codex, "gpt-6-luna");
   assert.ok(
     read(dir, ".gitignore").includes(".reasongraph/state/"),
     "shared gitignore written",
@@ -356,4 +356,36 @@ test("doctor under self-only flags a problem when why-packs are already tracked"
   const { out, result } = await inRepo(dir, () => doctor());
   assert.match(out, /already git-tracked/i, "flags the broken guarantee");
   assert.notEqual(result, 0, "reports a problem, not a clean bill of health");
+});
+
+test("init --agent maps cursor to the agent CLI and keeps existing settings", async () => {
+  const dir = tempRepo();
+  await inRepo(dir, () => init());
+  const file = path.join(dir, ".reasongraph", "config.json");
+  const before = JSON.parse(fs.readFileSync(file, "utf8"));
+  before.redaction = ["KEEP_ME"];
+  fs.writeFileSync(file, JSON.stringify(before));
+
+  await inRepo(dir, () => init({ agent: "cursor" }));
+
+  const after = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(after.distiller.backend, "agent");
+  assert.equal(after.distiller.models.agent, "auto");
+  assert.deepEqual(after.redaction, ["KEEP_ME"]);
+});
+
+test("init --agent antigravity seeds its model; self-only writes the local config", async () => {
+  const dir = tempRepo();
+  await inRepo(dir, () => init({ selfOnly: true, agent: "antigravity" }));
+  const local = JSON.parse(read(dir, ".reasongraph/state/config.json"));
+  assert.equal(local.distiller.backend, "antigravity");
+  assert.equal(local.distiller.models.antigravity, "gemini-3.8-flash-medium");
+  assert.equal(local.selfOnly, true);
+});
+
+test("init rejects an unknown --agent before changing anything", async () => {
+  const dir = tempRepo();
+  const { result } = await inRepo(dir, () => init({ agent: "vim" }));
+  assert.equal(result, 1);
+  assert.equal(fs.existsSync(path.join(dir, ".reasongraph")), false);
 });

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { resolveRuntime } from "../util/runtime.js";
 import { reasongraphPaths } from "../util/paths.js";
-import { defaultSharedConfig } from "../util/config.js";
+import { AGENT_BACKENDS, DEFAULT_CONFIG, DistillerBackend, defaultSharedConfig } from "../util/config.js";
 import { ensureDir, writeFileAtomic } from "../util/fsx.js";
 import { hookFallback } from "../util/self.js";
 import { hooksDir, trackedFilesUnder } from "../util/git.js";
@@ -23,6 +23,8 @@ const GREP_END = "# <<< reasongraph managed <<<";
 export interface InitOptions {
   /** Personal mode: commit nothing, ignore artifacts via `.git/info/exclude`. */
   selfOnly?: boolean;
+  /** Agent CLI that distills: claude, codex, cursor, or antigravity. Overrides the default. */
+  agent?: string;
 }
 
 export async function init(opts: InitOptions = {}): Promise<number> {
@@ -32,6 +34,14 @@ export async function init(opts: InitOptions = {}): Promise<number> {
       "not inside a git repository. Run `git init` first, then `reasongraph init`.",
     );
     return 1;
+  }
+  let backend: DistillerBackend | undefined;
+  if (opts.agent !== undefined) {
+    backend = AGENT_BACKENDS[opts.agent];
+    if (!backend) {
+      warn(`unknown --agent '${opts.agent}'. Use ${Object.keys(AGENT_BACKENDS).join(", ")}.`);
+      return 1;
+    }
   }
   const { repoRoot } = rt;
   const paths = reasongraphPaths(repoRoot);
@@ -67,6 +77,11 @@ export async function init(opts: InitOptions = {}): Promise<number> {
       ? "Saved personal config and ignore rules"
       : "Saved shared config and ignore rules",
   );
+
+  if (backend) {
+    setDistillerBackend(selfOnly ? paths.localConfigFile : paths.sharedConfigFile, backend);
+    progress(`Distiller CLI set to ${opts.agent} (${DEFAULT_CONFIG.distiller.models[backend]})`);
+  }
 
   // Shared pointer belongs in the agent instruction file loaded by this repo.
   const agentsMdResult = selfOnly
@@ -275,6 +290,22 @@ function setupSelfOnly(repoRoot: string, paths: reasongraphPaths): void {
     ]);
   else
     warn("could not resolve .git/info/exclude — artifacts were not ignored.");
+}
+
+/** Point an existing config file's distiller at `backend`, keeping its other settings. */
+function setDistillerBackend(file: string, backend: DistillerBackend): void {
+  let config: Record<string, any> = {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) config = parsed;
+  } catch {
+    /* start from an empty config */
+  }
+  const distiller = config.distiller && typeof config.distiller === "object" ? config.distiller : {};
+  const models = distiller.models && typeof distiller.models === "object" ? distiller.models : {};
+  models[backend] ??= DEFAULT_CONFIG.distiller.models[backend];
+  config.distiller = { ...distiller, backend, models };
+  writeFileAtomic(file, JSON.stringify(config, null, 2) + "\n");
 }
 
 function readLocalConfig(paths: reasongraphPaths): Record<string, unknown> {
