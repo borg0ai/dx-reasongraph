@@ -567,3 +567,15 @@ Status: directed
 Touches: `.gitignore`, `.playwright-mcp/**`
 
 Generated Playwright artifacts are ignored and removed from the Git index while remaining on disk. This keeps local browser snapshots out of repository history.
+
+### Set the shared distiller backend to Codex
+Status: directed
+Touches: `.reasongraph/config.json`
+
+The shared configuration selects Codex so repository users use that backend. The local configuration has higher precedence, but it was also set to Codex.
+
+### Commit the distiller and progress changes before release
+Status: directed
+Touches: `apps/cli/src`, `apps/cli/test`
+
+The CLI changes and their tests were committed after typecheck, 111 tests passed, and ESLint reported no issues. The changes include distiller fallback, interactive progress output, and Codex reasoning-effort configuration.
