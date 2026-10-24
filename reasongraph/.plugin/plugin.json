@@ -1,6 +1,6 @@
 {
   "name": "reasongraph",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Repository decision history, context injection, and session distillation hooks.",
   "author": {
     "name": "Borg0 AI"
