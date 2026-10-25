@@ -616,7 +616,7 @@ Touches: `.reasongraph/config.json`
 
 The committed repository config selects Codex as the distiller backend. The packaged CLI reports Codex with model `gpt-6-luna` for this repository.
 
-### Keep init defaulting new repositories to the agent backend
+### Set init default distiller backend to Codex
 Status: discussed
 Touches: `apps/cli/src/commands/init.ts`, `apps/cli/src/util/config.ts`, `apps/cli/test/selfonly.test.ts`, `docs/config.md`
 
@@ -633,3 +633,12 @@ Status: directed
 Touches: `apps/cli/src`, `apps/cli/test`, `docs/config.md`
 
 Initialization accepts `--agent` to choose the distiller CLI written into the generated repository configuration. This makes backend selection available when seeding a repository.
+
+### Flag conflicting init defaults in the why-pack
+Status: discussed
+Touches: `.reasongraph/why/main.md`, `apps/cli/src/util/config.ts`
+
+The why-pack describes the init default as both `agent` and `Codex`, while the CLI config sets it to `codex`. This contradiction can mislead future readers; the review identified it as a content consistency issue.
+
+Risk: Readers may rely on incorrect documentation about the generated distiller default.
+Reviewer attention: Confirm why-pack wording matches the current CLI default.
