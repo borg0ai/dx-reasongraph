@@ -1,6 +1,6 @@
 # Why: main
 
-<!-- reasongraph:v1 generated 2026-10-24 — review before sharing; edit freely, edits are preserved -->
+<!-- reasongraph:v1 generated 2026-10-25 — review before sharing; edit freely, edits are preserved -->
 
 ## Intent
 Attribute each transcript to the adapter that owns its path, and stop marking a distill finished when a non-empty read yields no events.
