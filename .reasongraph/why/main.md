@@ -492,13 +492,11 @@ The existing changesets bright-seas-reason, modern-cats-reply, and quiet-lizards
 Risk: A release cut from the current changesets would omit the install behavior from the published notes.
 Reviewer attention: Confirm a new patch changeset names the npx-only install before any release.
 
-### Exclude the hook-generated why-pack from the release commit
-Status: discussed — called out; no commit created
+### Push the hook-generated why-pack commit after verifying its scope
+Status: agent-initiated
 Touches: `.reasongraph/why/main.md`
 
-.reasongraph/why/main.md is hook-generated and was identified as content that should stay out of the commit for this install change. No commit was created.
-
-Reviewer attention: Confirm a later commit does not stage .reasongraph/why/main.md with the install and RFC files.
+The agent chose to inspect commit `997dac2` and verify it contains only `.reasongraph/why/main.md` before pushing `main`. This keeps the generated record separate from the release commit.
 
 ### Format the existing Nix package to pass CI
 Status: discussed
