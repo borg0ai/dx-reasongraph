@@ -697,3 +697,21 @@ Status: discussed
 Touches: `.spec/rfc/completed/0005-multi-agent-skill-install.md`
 
 RFC 0005 在实现、验证和复审完成后标记为 Implemented 并归档。验证包括 122 项测试、类型检查、ESLint、构建、RFC 校验、Specify `sync-check` 和 `git diff --check`。
+
+### Synchronize all four release version files
+Status: discussed
+Touches: `package.json`, `apps/cli/package.json`, `apps/plugins/.claude-plugin/plugin.json`, `skills/reasongraph/metadata.json`
+
+The release uses version 0.2.5, following the existing 0.2.4 patch release. The same version was applied across the root package, CLI package, plugin manifest, and skill metadata to preserve the repository’s established release convention.
+
+### Update README with the 0.2.5 release link
+Status: directed
+Touches: `README.md`
+
+The README was updated to point to the 0.2.5 release so its documented latest release matches the versioned artifacts.
+
+### Use the repository tag workflow for the CLI release
+Status: discussed
+Touches: `.github/workflows/*`
+
+The repository’s release contract is triggered by a version tag and attaches the npm pack tarball with SHA256SUMS. The CLI tarball dry run confirmed version 0.2.5 and expected contents; checks also passed for 122 tests, type checking, ESLint, formatting, build, and Specify synchronization.
