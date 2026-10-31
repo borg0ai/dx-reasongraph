@@ -1,6 +1,6 @@
 # Why: main
 
-<!-- reasongraph:v1 generated 2026-10-25 — review before sharing; edit freely, edits are preserved -->
+<!-- reasongraph:v1 generated 2026-10-31 — review before sharing; edit freely, edits are preserved -->
 
 ## Intent
 Attribute each transcript to the adapter that owns its path, and stop marking a distill finished when a non-empty read yields no events.
@@ -159,12 +159,10 @@ Considered/rejected: npx skills add, an in-package directory as the install sour
 Reviewer attention: Confirm install arguments are the repository slug plus project scope, not a path inside apps/cli.
 
 ### Limit init to seeding the repository
-Status: directed
-Touches: `apps/cli/src/**`, `.reasongraph/config.json`, `.reasongraph/state/**`
+Status: discussed
+Touches: `apps/cli/src/commands/init.ts`
 
-init writes the repository seed, including .reasongraph/config.json, local state under .reasongraph/state, and the Git pre-push hook whose fallback points at the packaged CLI. It does not install the agent plugin and does not chain into install. Agent hook registration is left to the plugin so the same hooks are not installed twice.
-
-Considered/rejected: An install command that implicitly ran init, and init writing host settings hooks, were removed.
+Keep `init` focused on seeding `.reasongraph/`; agent setup belongs to `install`. This keeps project initialization and agent configuration as separate responsibilities.
 
 ### Write the shared instruction pointer into AGENTS.md
 Status: directed
@@ -642,3 +640,23 @@ The why-pack describes the init default as both `agent` and `Codex`, while the C
 
 Risk: Readers may rely on incorrect documentation about the generated distiller default.
 Reviewer attention: Confirm why-pack wording matches the current CLI default.
+
+### Prioritize RFC 0005 multi-agent skill installation
+Status: discussed
+Touches: `.spec/rfc/0005-multi-agent-skill-install.md`
+
+The agent judged cross-agent installation valuable because plugin-only installation leaves agents that support `SKILL.md` without full integration. Project-level installation for plugins and global installation for skills provide a clear scope boundary.
+
+### Defer RFC 0006 until reviewer value is measured
+Status: directed
+Touches: `.spec/rfc/rejected/`, `ROADMAP`, `任务追踪文件`
+
+代理将 RFC 0006 标记为 Rejected 并移入拒绝目录，同步路线图和任务追踪，以保持 RFC 状态记录一致。
+
+### Manage ReasonGraph ignores in .reasongraph/.gitignore
+Status: discussed
+Touches: `.gitignore`, `apps/cli/src/commands/init.ts`, `.reasongraph/.gitignore`
+
+Have `init` create `.reasongraph/.gitignore` to exclude machine-local state, avoiding changes to the repository-level ignore file. Keep shared `config.json` and `why/` commit-friendly; preserve `--self-only` behavior that excludes personal why-packs through `.git/info/exclude`.
+
+Considered/rejected: Writing the state ignore rule to the repository root `.gitignore` expands initialization's changes beyond ReasonGraph's own directory.
