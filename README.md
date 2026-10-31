@@ -1,5 +1,7 @@
 # ReasonGraph
 
+Latest release: [v0.2.5](https://github.com/borg0ai/dx-reasongraph/releases/tag/v0.2.5).
+
 **Make agent-written code reviewable.**
 
 When a coding agent builds a feature, it makes a bunch of small decisions along the way that you never really approved. Later someone reviews the PR and asks "why was this done this way?" and you don't know. The answer is buried in a chat transcript on your laptop, and Claude Code deletes those after 30 days by default.
