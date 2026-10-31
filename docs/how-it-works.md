@@ -13,13 +13,15 @@ transcripts and catches up.* Distillation never runs in git's hot path, so commi
 ```bash
 npx --yes @borg0ai/reasongraph init
 npx --yes @borg0ai/reasongraph install
+npx --yes @borg0ai/reasongraph install --global
 ```
 
-Two commands, two jobs:
+`init` sets up a repository. `install` adds agent integrations.
 
-- **`reasongraph install`** adds the root plugin through `npx plugins add` — the agent
-  lifecycle hooks (`Stop`, `SessionEnd`, `PreToolUse`) and the `reasongraph` skill. This
-  is global to your agent tools, so you run it once per machine.
+- **`reasongraph install`** adds the `reasongraph` skill to detected project agents through
+  `npx skills`, then adds project hooks through `npx plugins add`.
+- **`reasongraph install --global`** adds the skill to detected global agents. It does not
+  install hooks and works outside a Git repository.
 - **`reasongraph init`** seeds the repository. This is per-checkout, and it's idempotent.
   It installs:
   - A git `pre-push` hook, chaining onto husky/lefthook rather than clobbering. Git hooks
@@ -28,9 +30,12 @@ Two commands, two jobs:
   - A shared `.reasongraph/config.json` ([config](CONFIG.md)) and a pointer in `AGENTS.md`
     telling agents to read the why-packs.
 
-`init` deliberately does *not* install the plugin. The split keeps the two lifecycles
-honest: a plugin upgrade shouldn't rewrite your repo, and a fresh clone doesn't need a
-plugin install.
+Project detection recognizes Antigravity, Claude Code, Codex, Cursor, and OpenCode markers.
+When it finds no marker, project install writes the skill to `.agents/skills` for universal
+Agent Skills support.
+
+`init` deliberately does *not* install the plugin. A plugin update does not rewrite the
+repository, and a fresh clone does not need the plugin install to read why-packs.
 
 **Adopting on an existing project?** If this machine already has Claude sessions for the repo,
 `init` offers to backfill them — distilling your local history so the pack is useful on day one.
@@ -42,8 +47,8 @@ commits: the result lands in `.reasongraph/why/` for you to review.
 Three things travel through git: the why-packs (`.reasongraph/why/`), the team config
 (`.reasongraph/config.json`), and the `AGENTS.md` pointer. Everything else stays on your
 machine — local state under `.reasongraph/state/` (gitignored), the git `pre-push` hook, and
-the agent plugin installed by `reasongraph install`. A fresh clone needs only `reasongraph
-init` to be useful; the plugin install is per-machine, not per-repo.
+the agent skill and plugin installed by `reasongraph install`. A fresh clone needs only
+`reasongraph init` to be useful; global skill installation is per-machine.
 
 ## The hooks
 

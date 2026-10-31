@@ -26,6 +26,8 @@ test("root plugin exposes hooks and a skill that closes the CLI context and sync
 
   assert.equal(manifest.name, "reasongraph");
   assert.ok(Object.keys(hooks.hooks).length > 0);
+  assert.match(skill, /If neither `\.reasongraph\/config\.json` nor `\.reasongraph\/state\/config\.json` exists/);
+  assert.match(skill, /npx --yes @borg0ai\/reasongraph init/);
   assert.match(skill, /npx --yes @borg0ai\/reasongraph context/);
   assert.match(skill, /npx --yes @borg0ai\/reasongraph sync/);
   assert.equal(fs.existsSync(path.join(repoRoot, "apps", "cli", "reasongraph")), false);

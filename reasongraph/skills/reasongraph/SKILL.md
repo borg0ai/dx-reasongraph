@@ -10,9 +10,10 @@ important rationale available to future contributors.
 
 ## Before changing code
 
-1. Run `npx --yes @borg0ai/reasongraph context <file-or-directory>` for the code being changed.
-2. Read matching entries under `.reasongraph/why/` when the CLI reports prior decisions.
-3. Treat those entries as project context; surface conflicts to the user before
+1. If neither `.reasongraph/config.json` nor `.reasongraph/state/config.json` exists, run `npx --yes @borg0ai/reasongraph init`.
+2. Run `npx --yes @borg0ai/reasongraph context <file-or-directory>` for the code being changed.
+3. Read matching entries under `.reasongraph/why/` when the CLI reports prior decisions.
+4. Treat those entries as project context; surface conflicts to the user before
    changing the recorded direction.
 
 ## After making a decision

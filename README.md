@@ -8,12 +8,14 @@ ReasonGraph reads your session transcripts locally, pulls out the decisions, and
 
 ```bash
 npx --yes @borg0ai/reasongraph init      # seed .reasongraph/ + the Git pre-push hook
-npx --yes @borg0ai/reasongraph install   # install the reasongraph/ plugin via npx plugins
+npx --yes @borg0ai/reasongraph install          # install the skill and project plugin for detected agents
+npx --yes @borg0ai/reasongraph install --global # install the skill for detected global agents
 ```
 
-`init` is per-repository and safe to re-run. `install` installs the plugin from
-this repository's `reasongraph/` directory (its hooks and the `reasongraph`
-skill) into whichever agent tools you use.
+`init` is per-repository and safe to re-run. `install` adds the `reasongraph`
+skill for detected agents and the plugin from this repository's `reasongraph/`
+directory. Use `--global` to install the skill for global agents without installing
+project hooks.
 
 ## What it looks like
 
@@ -97,7 +99,8 @@ Where it doesn't help, honestly:
 | Command | Purpose |
 |---|---|
 | `reasongraph init` | Seed `.reasongraph/`, the why-pack dir, and the Git pre-push hook. Per-checkout, safe to re-run. Offers to backfill local sessions. Add `--self-only` for a private, never-committed setup. |
-| `reasongraph install` | Install the root ReasonGraph plugin into detected agent tools through `npx plugins add`. |
+| `reasongraph install` | Install the skill for detected project agents, then install the root plugin through `npx plugins add`. |
+| `reasongraph install --global` | Install the skill for detected global agents. Does not install project hooks. |
 | `reasongraph status` / `doctor` | Health checks, what's distilled, what's stale. |
 | `reasongraph context <path>` | Show the entries that apply to a file. |
 | `reasongraph sync` | Distill and commit right now (still never pushes). |

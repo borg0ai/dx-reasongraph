@@ -2,7 +2,7 @@
 
 **Status:** Implemented
 
-Supersedes the installer clause of [RFC 0003](completed/0003-root-plugin-install-skill-loop.md). Plugin location, init/install separation, and the skill's use of the ReasonGraph CLI stay as 0003 specified.
+Supersedes the installer clause of [RFC 0003](0003-root-plugin-install-skill-loop.md). Plugin location, init/install separation, and the skill's use of the ReasonGraph CLI stay as 0003 specified.
 
 ## Summary
 

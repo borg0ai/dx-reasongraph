@@ -654,9 +654,46 @@ Touches: `.spec/rfc/rejected/`, `ROADMAP`, `任务追踪文件`
 代理将 RFC 0006 标记为 Rejected 并移入拒绝目录，同步路线图和任务追踪，以保持 RFC 状态记录一致。
 
 ### Manage ReasonGraph ignores in .reasongraph/.gitignore
+Status: directed
+Touches: `.reasongraph/.gitignore`
+
+The ignore rules exclude `.reasongraph` contents by default while allowing `.gitignore`, `config.json`, and `why/`. This keeps machine-local state out of version control while retaining shared configuration and why-packs.
+
+### Define zero-detected-agent behavior before approving RFC 0005
 Status: discussed
-Touches: `.gitignore`, `apps/cli/src/commands/init.ts`, `.reasongraph/.gitignore`
+Touches: `.spec/rfc/0005-multi-agent-skill-install.md`
 
-Have `init` create `.reasongraph/.gitignore` to exclude machine-local state, avoiding changes to the repository-level ignore file. Keep shared `config.json` and `why/` commit-friendly; preserve `--self-only` behavior that excludes personal why-packs through `.git/info/exclude`.
+The RFC specifies that project installation writes only the shared `universal` copy when detection finds no agents. Global installation fails without changing anything, because the upstream `skills add -y` behavior selects the full agent catalog when detection returns zero.
 
-Considered/rejected: Writing the state ignore rule to the repository root `.gitignore` expands initialization's changes beyond ReasonGraph's own directory.
+Considered/rejected: Selecting every agent for global installation was rejected because zero detection could unintentionally broaden the install.
+Reviewer attention: Confirm both zero-detection behaviors and their acceptance criteria are present; RFC remains Draft, and code implementation remains approval-gated.
+
+### Create the Netify capability registry
+Status: discussed
+Touches: `.netify.json`
+
+The workflow requires a repository capability list covering its default tools and graphs so each task can record evidence of their use or availability.
+
+### Detect Antigravity alongside supported agents during skill installation
+Status: discussed
+Touches: `apps/cli/src/**/install.ts`, `.spec/rfc/completed/0005-multi-agent-skill-install.md`
+
+安装器将 Antigravity 加入 agent 探测表，使支持范围与 ReasonGraph 的 distiller backend 及 Skills CLI 可用目录保持一致。RFC 0005 随之记录该支持范围。
+
+### Detect agent installations through custom configuration paths
+Status: discussed
+Touches: `apps/cli/src/**/install.ts`, `apps/cli/**/*.test.ts`
+
+全局探测读取 `CLAUDE_CONFIG_DIR` 和 `CODEX_HOME`，以覆盖自定义配置目录。回归测试扩至 122 项并全部通过。
+
+### Correct RFC 0010 link to RFC 0003
+Status: discussed
+Touches: `.spec/rfc/completed/0010-*`
+
+RFC 0010 的相对链接错误地指向 RFC 0003；修复链接以恢复跨文件引用，并通过 Specify 校验。该修复没有改变 RFC 决策。
+
+### Mark RFC 0005 implemented and archive it
+Status: discussed
+Touches: `.spec/rfc/completed/0005-multi-agent-skill-install.md`
+
+RFC 0005 在实现、验证和复审完成后标记为 Implemented 并归档。验证包括 122 项测试、类型检查、ESLint、构建、RFC 校验、Specify `sync-check` 和 `git diff --check`。

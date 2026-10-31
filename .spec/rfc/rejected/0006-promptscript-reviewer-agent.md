@@ -1,6 +1,6 @@
 # RFC 0006: Ship a why-pack-aware reviewer agent via PromptScript
 
-**Status:** Draft
+**Status:** Rejected
 
 ## Summary
 

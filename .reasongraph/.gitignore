@@ -1,0 +1,5 @@
+# Ignore everything in .reasongraph by default
+/*
+!.gitignore
+!config.json
+!why/

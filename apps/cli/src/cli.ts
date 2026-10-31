@@ -46,7 +46,7 @@ Usage:
       --agent <cli>                    distiller CLI: claude | codex | cursor | antigravity
       --self-only                      personal mode: commit nothing; ignore
                                        artifacts via .git/info/exclude
-  reasongraph install                Install agent plugin with npx plugins
+  reasongraph install [--global]     Install skill for detected agents; plugin at project scope
   reasongraph distill [opts]         Distill sessions into why-packs
       --session <id>                   only this session
       --branch <name>                  attribute to this branch
@@ -70,8 +70,10 @@ async function main(): Promise<number> {
   const rest = argv.slice(1);
 
   switch (command) {
-    case "install":
-      return install();
+    case "install": {
+      const { flags } = parseFlags(rest);
+      return install({ global: flags.global === true });
+    }
     case "init": {
       const { flags } = parseFlags(rest);
       return init({
