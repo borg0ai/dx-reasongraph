@@ -1,6 +1,6 @@
 # Why: main
 
-<!-- reasongraph:v1 generated 2026-10-31 — review before sharing; edit freely, edits are preserved -->
+<!-- reasongraph:v1 generated 2026-11-01 — review before sharing; edit freely, edits are preserved -->
 
 ## Intent
 Attribute each transcript to the adapter that owns its path, and stop marking a distill finished when a non-empty read yields no events.
@@ -713,3 +713,12 @@ Status: discussed
 Touches: `.github/workflows/*`
 
 The repository’s release contract is triggered by a version tag and attaches the npm pack tarball with SHA256SUMS. The CLI tarball dry run confirmed version 0.2.5 and expected contents; checks also passed for 122 tests, type checking, ESLint, formatting, build, and Specify synchronization.
+
+### Install ReasonGraph 0.2.5 from the luban Homebrew tap
+Status: directed
+Touches: `.agents/skills/reasongraph/`, `skills-lock.json`
+
+The agent installed ReasonGraph 0.2.5 from the luban Homebrew tap, then ran its installer in the repository to set up agent integrations. It placed the Homebrew binary first on PATH because an older Volta shim would otherwise have run.
+
+Risk: The installer created untracked skill and lock files; they remain uncommitted.
+Reviewer attention: Confirm the generated files are intended for this repository and review them before committing.

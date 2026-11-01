@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "reasongraph": {
+      "source": "borg0ai/dx-reasongraph",
+      "sourceType": "github",
+      "skillPath": "reasongraph/skills/reasongraph/SKILL.md",
+      "computedHash": "388a2df7d8e19592513aad46a6a701449987efc229e3169ddfdc96fd0aa8f901"
+    }
+  }
+}
