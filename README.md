@@ -1,6 +1,8 @@
 # ReasonGraph
 
-Latest release: [v0.2.5](https://github.com/borg0ai/dx-reasongraph/releases/tag/v0.2.5).
+Latest release: [v0.2.6](https://github.com/borg0ai/dx-reasongraph/releases/tag/v0.2.6).
+
+Version 0.2.6: `reasongraph init` now creates `.reasongraph/.gitignore` during shared setup, keeping local-state ignore rules inside ReasonGraph and leaving the repository root `.gitignore` untouched.
 
 **Make agent-written code reviewable.**
 
