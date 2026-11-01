@@ -652,10 +652,10 @@ Touches: `.spec/rfc/rejected/`, `ROADMAP`, `任务追踪文件`
 代理将 RFC 0006 标记为 Rejected 并移入拒绝目录，同步路线图和任务追踪，以保持 RFC 状态记录一致。
 
 ### Manage ReasonGraph ignores in .reasongraph/.gitignore
-Status: directed
+Status: discussed
 Touches: `.reasongraph/.gitignore`
 
-The ignore rules exclude `.reasongraph` contents by default while allowing `.gitignore`, `config.json`, and `why/`. This keeps machine-local state out of version control while retaining shared configuration and why-packs.
+The ignore file is tracked and excludes generated `.reasongraph/` contents while retaining `.gitignore`, `config.json`, and `why/`. It did not appear in `git status` because it had no changes.
 
 ### Define zero-detected-agent behavior before approving RFC 0005
 Status: discussed
@@ -722,3 +722,11 @@ The agent installed ReasonGraph 0.2.5 from the luban Homebrew tap, then ran its 
 
 Risk: The installer created untracked skill and lock files; they remain uncommitted.
 Reviewer attention: Confirm the generated files are intended for this repository and review them before committing.
+
+### Create the nested ignore file during shared init
+Status: directed
+Touches: `apps/cli/src/commands/init.ts`, `apps/cli/src/commands/init.test.ts`, `.spec/rfc/completed/0011-reasongraph-init-nested-ignore.md`
+
+Shared initialization creates `.reasongraph/.gitignore` with rules for `.gitignore`, `config.json`, and `why/`. Existing nested rules remain intact on rerun, while self-only initialization keeps its private exclusion behavior. This avoids adding rules to the repository root `.gitignore`.
+
+Considered/rejected: Appending rules to the root `.gitignore` was rejected because shared initialization should keep ReasonGraph ignore rules in its own directory.
