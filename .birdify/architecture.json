@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "reasongraph-why-storage",
-  "revision": 2,
+  "revision": 3,
   "constraintDiscovery": {
     "checkedAt": "2026-09-27T18:32:00Z",
     "checkedPaths": [
@@ -294,6 +294,33 @@
       "status": "supported",
       "openQuestions": [],
       "layout": { "row": 0, "column": 2 }
+    },
+    {
+      "id": "repository-initialization",
+      "role": "backend",
+      "name": "Repository initialization",
+      "kind": "local",
+      "responsibility": "Seeds shared or self-only ReasonGraph directories and configuration, updates repository instructions, and installs the Git pre-push hook.",
+      "ownership": [
+        { "kind": "file", "path": "apps/cli/src/commands/init.ts" }
+      ],
+      "evidence": [
+        {
+          "path": "apps/cli/src/commands/init.ts",
+          "line": 30,
+          "symbol": "init",
+          "note": "Init creates ReasonGraph directories, selects shared or self-only setup, and installs repository integration."
+        },
+        {
+          "path": "apps/cli/src/commands/init.ts",
+          "line": 251,
+          "symbol": "setupShared",
+          "note": "Shared setup creates committed config and the nested ReasonGraph ignore file."
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": { "row": 2, "column": 1 }
     }
   ],
   "relationships": [
@@ -398,6 +425,24 @@
           "path": "apps/cli/src/adapters/codex.ts",
           "line": 101,
           "note": "Codex keeps a session only when session_meta cwd matches the repo."
+        }
+      ]
+    },
+    {
+      "id": "init-seeds-why-store",
+      "from": "repository-initialization",
+      "to": "why-pack-store",
+      "kind": "result",
+      "visibility": "overview",
+      "label": "Seed the why-pack directory",
+      "status": "supported",
+      "openQuestions": [],
+      "evidence": [
+        {
+          "path": "apps/cli/src/commands/init.ts",
+          "line": 60,
+          "symbol": "init",
+          "note": "Init ensures the shared why directory exists and creates its .gitkeep placeholder."
         }
       ]
     }

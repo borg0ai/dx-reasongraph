@@ -12,3 +12,4 @@
 
 - [x] Implement RFC 0010: Install the root plugin through npx @borg0ai/plugins (RFC 0010)
 - [x] Implement RFC 0005: Install the ReasonGraph skill for every detected agent (RFC 0005)
+- [x] Implement RFC 0011: Create .reasongraph ignore rules during shared init (RFC 0011)

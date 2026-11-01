@@ -12,3 +12,4 @@
 | 0008 | [Attribute each transcript to the adapter that owns it](rfc/completed/0008-transcript-tool-attribution.md) | Implemented |
 | 0009 | [Improve init command progress and output](rfc/completed/0009-init-command-progress.md) | Implemented |
 | 0010 | [Install the root plugin through npx @borg0ai/plugins](rfc/completed/0010-scoped-plugins-cli-install.md) | Implemented |
+| 0011 | [Create .reasongraph ignore rules during shared init](rfc/completed/0011-reasongraph-init-nested-ignore.md) | Implemented |

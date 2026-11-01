@@ -70,7 +70,7 @@ export async function init(opts: InitOptions = {}): Promise<number> {
   if (selfOnly) {
     setupSelfOnly(repoRoot, paths);
   } else {
-    setupShared(repoRoot, paths);
+    setupShared(paths);
   }
   progress(
     selfOnly
@@ -247,8 +247,7 @@ async function offerBackfill(repoRoot: string): Promise<number> {
   return code;
 }
 
-/** Shared/team setup: committed config + local placeholder + shared gitignore. */
-function setupShared(repoRoot: string, paths: reasongraphPaths): void {
+function setupShared(paths: reasongraphPaths): void {
   ensureDir(path.dirname(paths.sharedConfigFile));
   if (!fs.existsSync(paths.sharedConfigFile)) {
     writeFileAtomic(
@@ -259,7 +258,20 @@ function setupShared(repoRoot: string, paths: reasongraphPaths): void {
   if (!fs.existsSync(paths.localConfigFile)) {
     writeFileAtomic(paths.localConfigFile, JSON.stringify({}, null, 2) + "\n");
   }
-  ensureGitignore(repoRoot);
+  const ignoreFile = path.join(paths.reasongraphDir, ".gitignore");
+  if (!fs.existsSync(ignoreFile)) {
+    writeFileAtomic(
+      ignoreFile,
+      [
+        "# Ignore everything in .reasongraph by default",
+        "/*",
+        "!.gitignore",
+        "!config.json",
+        "!why/",
+        "",
+      ].join("\n"),
+    );
+  }
 }
 
 /**
@@ -319,25 +331,6 @@ function readLocalConfig(paths: reasongraphPaths): Record<string, unknown> {
   } catch {
     return {};
   }
-}
-
-function ensureGitignore(repoRoot: string): void {
-  const file = path.join(repoRoot, ".gitignore");
-  const wanted = [".reasongraph/state/"];
-  let contents = "";
-  try {
-    contents = fs.readFileSync(file, "utf8");
-  } catch {
-    /* no gitignore yet */
-  }
-  const present = new Set(contents.split("\n").map((l) => l.trim()));
-  const missing = wanted.filter((l) => !present.has(l));
-  if (missing.length === 0) return;
-  const prefix = contents && !contents.endsWith("\n") ? "\n" : "";
-  fs.appendFileSync(
-    file,
-    `${prefix}\n# ReasonGraph local state (per-machine)\n${missing.join("\n")}\n`,
-  );
 }
 
 const AGENTS_MD_BEGIN = "<!-- reasongraph:begin -->";

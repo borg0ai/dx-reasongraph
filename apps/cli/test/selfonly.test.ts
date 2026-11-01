@@ -138,6 +138,10 @@ test("init --self-only: excludes artifacts privately and touches no shared file"
     !fs.existsSync(path.join(dir, "AGENTS.md")),
     "self-only does not write shared agent instructions",
   );
+  assert.ok(
+    !fs.existsSync(path.join(dir, ".reasongraph", ".gitignore")),
+    "self-only does not create a shared ignore file",
+  );
 
   // No shared/committable files created or modified.
   assert.ok(
@@ -162,6 +166,8 @@ test("init --self-only: excludes artifacts privately and touches no shared file"
 
 test("init (normal): still writes the shared artifacts and no exclude block", async () => {
   const dir = tempRepo();
+  const rootIgnore = "# existing repository rules\n";
+  fs.writeFileSync(path.join(dir, ".gitignore"), rootIgnore);
   const { out } = await inRepo(dir, () => init());
 
   assert.ok(out.includes("Saved shared config and ignore rules"));
@@ -176,9 +182,30 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
     "init defaults the distiller CLI to codex",
   );
   assert.equal(shared.distiller.models.codex, "gpt-6-luna");
-  assert.ok(
-    read(dir, ".gitignore").includes(".reasongraph/state/"),
-    "shared gitignore written",
+  assert.equal(read(dir, ".gitignore"), rootIgnore, "root gitignore is untouched");
+  const nestedIgnore = read(dir, ".reasongraph/.gitignore");
+  assert.equal(
+    nestedIgnore,
+    "# Ignore everything in .reasongraph by default\n/*\n!.gitignore\n!config.json\n!why/\n",
+    "shared init writes the ReasonGraph allowlist",
+  );
+  assert.deepEqual(
+    git(dir, ["ls-files", "--others", "--exclude-standard", "--", ".reasongraph"])
+      .split("\n")
+      .filter(Boolean)
+      .sort(),
+    [
+      ".reasongraph/.gitignore",
+      ".reasongraph/config.json",
+      ".reasongraph/why/.gitkeep",
+    ].sort(),
+    "only the ignore file, shared config, and why-pack directory remain visible",
+  );
+  await inRepo(dir, () => init());
+  assert.equal(
+    read(dir, ".reasongraph/.gitignore"),
+    nestedIgnore,
+    "repeated init preserves generated ignore rules",
   );
   assert.ok(
     read(dir, "AGENTS.md").includes("reasongraph:begin"),
@@ -188,6 +215,17 @@ test("init (normal): still writes the shared artifacts and no exclude block", as
     !read(dir, ".git/info/exclude").includes("reasongraph self-only"),
     "no private exclude",
   );
+});
+
+test("init (normal): preserves an existing .reasongraph/.gitignore", async () => {
+  const dir = tempRepo();
+  const existing = "# project-owned rules\ncustom-entry/\n";
+  fs.mkdirSync(path.join(dir, ".reasongraph"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".reasongraph/.gitignore"), existing);
+
+  await inRepo(dir, () => init());
+
+  assert.equal(read(dir, ".reasongraph/.gitignore"), existing);
 });
 
 test("init moves legacy why-packs into .reasongraph/why", async () => {
